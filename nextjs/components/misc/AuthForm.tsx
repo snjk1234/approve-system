@@ -31,20 +31,26 @@ export function AuthForm({ state }: { state: AuthState }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [roleId, setRoleId] = useState('');
+  const [roles, setRoles] = useState<{ id: string; name: string }[]>([]);
   const [departmentId, setDepartmentId] = useState('');
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [resendTimeout, setResendTimeout] = useState(0);
 
-  // Fetch departments for registration
+  // Fetch departments and roles for registration
   useEffect(() => {
-    async function fetchDepartments() {
+    async function fetchData() {
       const supabase = createClient();
-      const { data } = await supabase.from('departments' as any).select('id, name');
-      if (data) setDepartments(data as any);
+      const { data: deptData } = await supabase.from('departments' as any).select('id, name');
+      if (deptData) setDepartments(deptData as any);
+
+      const { data: roleData } = await supabase.from('roles' as any).select('id, name');
+      if (roleData) setRoles(roleData as any);
     }
-    fetchDepartments();
+    fetchData();
   }, []);
 
   // Countdown timer for resend button
@@ -63,10 +69,10 @@ export function AuthForm({ state }: { state: AuthState }) {
       hasPasswordField: true,
       hasOAuth: false,
       onSubmit: async () => {
-        if (!fullName) {
+        if (!fullName || !phone || !roleId || !departmentId) {
           toast({
             title: 'خطأ',
-            description: 'يرجى إدخال الاسم الكامل',
+            description: 'يرجى إكمال جميع الحقول المطلوبة',
             variant: 'destructive'
           });
           return;
@@ -87,7 +93,9 @@ export function AuthForm({ state }: { state: AuthState }) {
             options: {
               data: {
                 full_name: fullName,
-                department_id: departmentId
+                department_id: departmentId,
+                phone: phone,
+                role_id: roleId
               }
             }
           });
@@ -295,6 +303,20 @@ export function AuthForm({ state }: { state: AuthState }) {
                 />
               </div>
               <div className="grid gap-2">
+                <Label htmlFor="phone" className="text-sm font-medium">رقم الهاتف</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="05XXXXXXXX"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  disabled={loading}
+                  required
+                  className="rounded-lg h-11 border-border/50 focus:ring-primary/20 text-right"
+                  dir="ltr"
+                />
+              </div>
+              <div className="grid gap-2">
                 <Label htmlFor="department" className="text-sm font-medium">الإدارة</Label>
                 <select
                   id="department"
@@ -304,9 +326,28 @@ export function AuthForm({ state }: { state: AuthState }) {
                   className="flex h-11 w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   required
                 >
+                  <option value="" disabled>اختر الإدارة</option>
                   {departments.map((dept) => (
                     <option key={dept.id} value={dept.id}>
                       {dept.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="role" className="text-sm font-medium">المسمى الوظيفي (الدور)</Label>
+                <select
+                  id="role"
+                  value={roleId}
+                  onChange={(e) => setRoleId(e.target.value)}
+                  disabled={loading}
+                  className="flex h-11 w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  required
+                >
+                  <option value="" disabled>اختر الدور</option>
+                  {roles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
                     </option>
                   ))}
                 </select>

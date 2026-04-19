@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
-import { User, Mail, Phone, Building2, Save } from 'lucide-react';
+import { User, Mail, Phone, Building2, Save, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,10 +17,12 @@ export default function ProfilePage() {
     const [saving, setSaving] = useState(false);
     const [user, setUser] = useState<any>(null);
     const [departments, setDepartments] = useState<any[]>([]);
+    const [roles, setRoles] = useState<any[]>([]);
     const [formData, setFormData] = useState({
         full_name: '',
         phone: '',
-        department_id: ''
+        department_id: '',
+        role_id: ''
     });
 
     useEffect(() => {
@@ -37,7 +39,7 @@ export default function ProfilePage() {
             if (authUser) {
                 const { data: userData } = await supabase
                     .from('profiles' as any)
-                    .select('*, departments(name)' as any)
+                    .select('*, departments(name), roles(name)' as any)
                     .eq('id', authUser.id)
                     .single();
 
@@ -47,7 +49,8 @@ export default function ProfilePage() {
                     setFormData({
                         full_name: u.full_name || '',
                         phone: u.phone || '',
-                        department_id: u.department_id || ''
+                        department_id: u.department_id || '',
+                        role_id: u.role_id || ''
                     });
                 }
             }
@@ -55,11 +58,20 @@ export default function ProfilePage() {
             const { data: depts } = await supabase.from('departments' as any).select('id, name');
             if (depts) setDepartments(depts);
 
+            const { data: rolesData } = await supabase.from('roles' as any).select('id, name');
+            if (rolesData) setRoles(rolesData);
+
             setLoading(false);
         }
 
         fetchData();
     }, []);
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        router.push('/login');
+        router.refresh();
+    };
 
     const handleSave = async () => {
         if (!user) {
@@ -73,6 +85,7 @@ export default function ProfilePage() {
                 full_name: formData.full_name,
                 phone: formData.phone,
                 department_id: formData.department_id,
+                role_id: formData.role_id,
                 updated_at: new Date().toISOString()
             })
             .eq('id', user.id);
@@ -102,9 +115,19 @@ export default function ProfilePage() {
 
     return (
         <div className="max-w-2xl mx-auto space-y-8 font-tajawal" dir="rtl">
-            <div>
-                <h1 className="text-3xl font-bold text-foreground">الملف الشخصي</h1>
-                <p className="text-muted-foreground mt-2">إدارة بياناتك الشخصية وإعدادات الحساب</p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold text-foreground">الملف الشخصي</h1>
+                    <p className="text-muted-foreground mt-2">إدارة بياناتك الشخصية وإعدادات الحساب</p>
+                </div>
+                <Button
+                    variant="outline"
+                    onClick={handleLogout}
+                    className="rounded-xl border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all gap-2"
+                >
+                    <LogOut size={18} />
+                    تسجيل الخروج
+                </Button>
             </div>
 
             <div className="grid gap-6 bg-card border border-border/50 p-8 rounded-2xl shadow-sm">
@@ -114,10 +137,17 @@ export default function ProfilePage() {
                     </div>
                     <div>
                         <h2 className="text-xl font-bold">{formData.full_name || 'موظف'}</h2>
-                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                            <Mail size={14} />
-                            {user?.email}
-                        </p>
+                        <div className="flex flex-col gap-1 mt-1">
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                <Mail size={14} />
+                                {user?.email}
+                            </p>
+                            {user?.roles?.name && (
+                                <p className="text-sm font-medium text-primary">
+                                    {user.roles.name}
+                                </p>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -165,6 +195,25 @@ export default function ProfilePage() {
                                 ))}
                             </select>
                             <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                        </div>
+                    </div>
+                    <div className="grid gap-2 text-right">
+                        <Label htmlFor="role" className="text-sm font-medium">المسمى الوظيفي (الدور)</Label>
+                        <div className="relative">
+                            <select
+                                id="role"
+                                value={formData.role_id}
+                                onChange={(e) => setFormData({ ...formData, role_id: e.target.value })}
+                                className="flex h-12 w-full rounded-xl border border-border/50 bg-background px-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
+                            >
+                                <option value="" disabled>اختر الدور</option>
+                                {roles.map((r) => (
+                                    <option key={r.id} value={r.id}>
+                                        {r.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <User className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                         </div>
                     </div>
                 </div>
