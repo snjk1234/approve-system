@@ -36,7 +36,7 @@ export default function ProfilePage() {
 
             if (authUser) {
                 const { data: userData } = await supabase
-                    .from('users' as any)
+                    .from('profiles' as any)
                     .select('*, departments(name)' as any)
                     .eq('id', authUser.id)
                     .single();
@@ -68,7 +68,7 @@ export default function ProfilePage() {
         }
         setSaving(true);
         const { error } = await supabase
-            .from('users' as any)
+            .from('profiles' as any)
             .update({
                 full_name: formData.full_name,
                 phone: formData.phone,

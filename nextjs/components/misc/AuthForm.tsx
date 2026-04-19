@@ -107,6 +107,7 @@ export function AuthForm({ state }: { state: AuthState }) {
 
           // Check if email is already verified (e.g., OAuth or pre-verified)
           if (res.user?.user_metadata?.email_verified) {
+            router.push('/dashboard');
             router.refresh();
           } else {
             setAuthState(AuthState.VerifyEmail);
@@ -136,6 +137,7 @@ export function AuthForm({ state }: { state: AuthState }) {
         setLoading(true);
         try {
           await api.passwordSignin({ email, password });
+          router.push('/dashboard');
           router.refresh();
         } catch (e) {
           if (e instanceof Error) {
