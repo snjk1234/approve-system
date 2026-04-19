@@ -7,11 +7,13 @@ import {
 import { getURL } from '@/utils/helpers';
 
 export const createApiClient = (supabase: SupabaseClient<Database>) => {
-  const passwordSignup = async (creds: { email: string; password: string }) => {
+  const passwordSignup = async (creds: { email: string; password: string; options?: { data?: Record<string, any> } }) => {
     const res = await supabase.auth.signUp({
-      ...creds,
+      email: creds.email,
+      password: creds.password,
       options: {
-        emailRedirectTo: getURL('/api/auth_callback')
+        emailRedirectTo: getURL('/api/auth_callback'),
+        data: creds.options?.data
       }
     });
     if (res.error) throw res.error;

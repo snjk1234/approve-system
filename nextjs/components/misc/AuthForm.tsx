@@ -30,9 +30,22 @@ export function AuthForm({ state }: { state: AuthState }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [departmentId, setDepartmentId] = useState('');
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [resendTimeout, setResendTimeout] = useState(0);
+
+  // Fetch departments for registration
+  useEffect(() => {
+    async function fetchDepartments() {
+      const supabase = createClient();
+      const { data } = await supabase.from('departments' as any).select('id, name');
+      if (data) setDepartments(data as any);
+    }
+    fetchDepartments();
+  }, []);
 
   // Countdown timer for resend button
   useEffect(() => {
@@ -44,12 +57,20 @@ export function AuthForm({ state }: { state: AuthState }) {
 
   const stateInfo: Record<AuthState, StateInfo> = {
     signup: {
-      title: 'Sign Up',
-      submitText: 'Sign Up',
+      title: 'إنشاء حساب جديد',
+      submitText: 'تسجيل',
       hasEmailField: true,
       hasPasswordField: true,
       hasOAuth: false,
       onSubmit: async () => {
+        if (!fullName) {
+          toast({
+            title: 'خطأ',
+            description: 'يرجى إدخال الاسم الكامل',
+            variant: 'destructive'
+          });
+          return;
+        }
         if (password !== confirmPassword) {
           toast({
             title: 'Password Error',
@@ -60,7 +81,16 @@ export function AuthForm({ state }: { state: AuthState }) {
         }
         setLoading(true);
         try {
-          const res = await api.passwordSignup({ email, password });
+          const res = await api.passwordSignup({
+            email,
+            password,
+            options: {
+              data: {
+                full_name: fullName,
+                department_id: departmentId
+              }
+            }
+          });
 
           // Check for duplicate email - Supabase returns user with empty identities array
           if (res.user && res.user.identities && res.user.identities.length === 0) {
@@ -97,8 +127,8 @@ export function AuthForm({ state }: { state: AuthState }) {
       }
     },
     signin: {
-      title: 'Sign In',
-      submitText: 'Sign In',
+      title: 'تسجيل الدخول',
+      submitText: 'دخول',
       hasEmailField: true,
       hasPasswordField: true,
       hasOAuth: true,
@@ -129,8 +159,8 @@ export function AuthForm({ state }: { state: AuthState }) {
       }
     },
     forgot_password: {
-      title: 'Reset Password',
-      submitText: 'Send Email',
+      title: 'إعادة تعيين كلمة المرور',
+      submitText: 'إرسال البريد',
       hasEmailField: true,
       hasPasswordField: false,
       hasOAuth: false,
@@ -155,8 +185,8 @@ export function AuthForm({ state }: { state: AuthState }) {
       }
     },
     update_password: {
-      title: 'Update Password',
-      submitText: 'Update Password',
+      title: 'تحديث كلمة المرور',
+      submitText: 'تحديث',
       hasEmailField: false,
       hasPasswordField: true,
       hasOAuth: false,
@@ -183,9 +213,9 @@ export function AuthForm({ state }: { state: AuthState }) {
       }
     },
     verify_email: {
-      title: 'Verify Your Email',
+      title: 'تأكيد البريد الإلكتروني',
       description:
-        "We've sent you a verification email. Please check your inbox and click the verification link to continue. If you don't see the email, check your spam folder or click below to resend.",
+        "لقد أرسلنا لك بريداً إلكترونياً للتأكيد. يرجى التحقق من صندوق الوارد والضغط على رابط التأكيد للمتابعة.",
       submitText:
         resendTimeout > 0
           ? `Resend in ${resendTimeout}s`
@@ -238,18 +268,52 @@ export function AuthForm({ state }: { state: AuthState }) {
 
   const currState = stateInfo[authState];
   return (
-    <Card className="mx-auto w-96 mx-4">
-      <CardHeader>
-        <CardTitle className="text-2xl">{currState.title}</CardTitle>
+    <Card className="mx-auto w-[400px] border-border/50 shadow-xl overflow-hidden font-tajawal text-right" dir="rtl">
+      <CardHeader className="space-y-1 bg-muted/30 pb-6">
+        <CardTitle className="text-2xl font-bold">{currState.title}</CardTitle>
         {currState.description && (
-          <CardDescription>{currState.description}</CardDescription>
+          <CardDescription className="text-muted-foreground">{currState.description}</CardDescription>
         )}
       </CardHeader>
-      <CardContent>
-        <div className="grid gap-4">
+      <CardContent className="pt-6">
+        <div className="grid gap-5">
+          {authState === 'signup' && (
+            <>
+              <div className="grid gap-2">
+                <Label htmlFor="fullName" className="text-sm font-medium">الاسم الكامل</Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="محمد أحمد"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  disabled={loading}
+                  required
+                  className="rounded-lg h-11 border-border/50 focus:ring-primary/20"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="department" className="text-sm font-medium">الإدارة</Label>
+                <select
+                  id="department"
+                  value={departmentId}
+                  onChange={(e) => setDepartmentId(e.target.value)}
+                  disabled={loading}
+                  className="flex h-11 w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  required
+                >
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
           {currState.hasEmailField && (
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-sm font-medium">البريد الإلكتروني</Label>
               <Input
                 id="email"
                 type="email"
@@ -258,20 +322,21 @@ export function AuthForm({ state }: { state: AuthState }) {
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
                 required
+                className="rounded-lg h-11 border-border/50 focus:ring-primary/20"
               />
             </div>
           )}
           {currState.hasPasswordField && (
             <div className="grid gap-2">
-              <div className="flex items-center">
-                <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" title="Password" className="text-sm font-medium">كلمة المرور</Label>
                 {authState === 'signin' && (
                   <Link
                     href="#"
                     onClick={() => setAuthState(AuthState.ForgotPassword)}
-                    className="ml-auto inline-block text-sm underline"
+                    className="text-sm text-primary hover:underline transition-all"
                   >
-                    Forgot your password?
+                    نسيت كلمة المرور؟
                   </Link>
                 )}
               </div>
@@ -283,7 +348,7 @@ export function AuthForm({ state }: { state: AuthState }) {
                   value={password}
                   required
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pr-10"
+                  className="rounded-lg h-11 pl-10 border-border/50 focus:ring-primary/20"
                 />
                 <button
                   type="button"
@@ -293,7 +358,7 @@ export function AuthForm({ state }: { state: AuthState }) {
                       setShowConfirmPassword(!showPassword);
                     }
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   disabled={loading}
                 >
                   {showPassword ? (
@@ -307,7 +372,7 @@ export function AuthForm({ state }: { state: AuthState }) {
           )}
           {authState === 'signup' && (
             <div className="grid gap-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword" title="Confirm Password" className="text-sm font-medium">تأكيد كلمة المرور</Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"
@@ -316,7 +381,7 @@ export function AuthForm({ state }: { state: AuthState }) {
                   value={confirmPassword}
                   required
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="pr-10"
+                  className="rounded-lg h-11 pl-10 border-border/50 focus:ring-primary/20"
                 />
                 <button
                   type="button"
@@ -324,7 +389,7 @@ export function AuthForm({ state }: { state: AuthState }) {
                     setShowPassword(!showConfirmPassword);
                     setShowConfirmPassword(!showConfirmPassword);
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   disabled={loading}
                 >
                   {showConfirmPassword ? (
@@ -338,33 +403,33 @@ export function AuthForm({ state }: { state: AuthState }) {
           )}
           <Button
             type="submit"
-            className="w-full"
+            className="w-full h-11 rounded-lg font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 active:scale-[0.98] transition-all"
             onClick={currState.onSubmit}
             disabled={loading}
           >
-            {currState.submitText}
+            {loading ? 'جاري التحميل...' : currState.submitText}
           </Button>
           {authState === 'signin' && (
-            <div className="text-center text-sm">
-              Don&apos;t have an account?{' '}
+            <div className="text-center text-sm text-muted-foreground">
+              ليس لديك حساب؟{' '}
               <Link
                 href="#"
-                className="underline"
+                className="font-bold text-primary hover:underline"
                 onClick={() => setAuthState(AuthState.Signup)}
               >
-                Sign up
+                إنشاء حساب جديد
               </Link>
             </div>
           )}
           {authState === 'signup' && (
-            <div className="text-center text-sm">
-              Already have an account?{' '}
+            <div className="text-center text-sm text-muted-foreground">
+              لديك حساب بالفعل؟{' '}
               <Link
                 href="#"
-                className="underline"
+                className="font-bold text-primary hover:underline"
                 onClick={() => setAuthState(AuthState.Signin)}
               >
-                Sign in
+                تسجيل الدخول
               </Link>
             </div>
           )}
@@ -405,23 +470,23 @@ export function AuthForm({ state }: { state: AuthState }) {
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
                   <span className="bg-background px-2 text-muted-foreground">
-                    Or continue with
+                    أو باستخدام
                   </span>
                 </div>
               </div>
               <Button
                 variant="outline"
-                className="w-full"
+                className="w-full h-11 rounded-lg border-border/50 hover:bg-muted"
                 onClick={() => api.oauthSignin('google')}
               >
-                <SiGoogle className="h-4 w-4 mr-2" /> Google
+                <SiGoogle className="h-4 w-4 ml-2" /> Google
               </Button>
               <Button
                 variant="outline"
-                className="w-full"
+                className="w-full h-11 rounded-lg border-border/50 hover:bg-muted"
                 onClick={() => api.oauthSignin('github')}
               >
-                <SiGithub className="h-4 w-4 mr-2" /> Github
+                <SiGithub className="h-4 w-4 ml-2" /> Github
               </Button>
             </>
           )}
