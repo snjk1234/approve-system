@@ -172,7 +172,20 @@ export function ChatWindow({ chatId, currentUser, otherUser }: ChatWindowProps) 
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4" style={{ backgroundImage: 'radial-gradient(var(--primary) 1px, transparent 1px)', backgroundSize: '40px 40px', backgroundPosition: '-19px -19px', opacity: 0.03 }}>
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 relative">
+                {/* Background Pattern */}
+                <div 
+                    className="absolute inset-0 pointer-events-none z-0" 
+                    style={{ 
+                        backgroundImage: 'radial-gradient(var(--primary) 1px, transparent 1px)', 
+                        backgroundSize: '40px 40px', 
+                        backgroundPosition: '-19px -19px', 
+                        opacity: 0.03 
+                    }} 
+                />
+                
+                {/* Messages Content */}
+                <div className="relative z-10 space-y-4">
                 {loading ? (
                     <div className="flex justify-center p-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -190,9 +203,13 @@ export function ChatWindow({ chatId, currentUser, otherUser }: ChatWindowProps) 
                                     <div className={`max-w-[70%] sm:max-w-[60%] flex flex-col ${isMe ? 'items-start' : 'items-end'}`}>
                                         <div
                                             className={`px-4 py-2.5 rounded-2xl shadow-sm ${isMe
-                                                ? 'bg-primary text-primary-foreground rounded-tr-none'
-                                                : 'bg-card border border-border/50 text-foreground rounded-tl-none'
+                                                ? 'rounded-tr-none'
+                                                : 'rounded-tl-none'
                                                 }`}
+                                            style={isMe 
+                                                ? { backgroundColor: '#b91c1c', color: '#ffffff' }
+                                                : { backgroundColor: '#ffffff', color: '#1a1a1a', border: '1px solid #e5e5e5' }
+                                            }
                                         >
                                             <p className="text-sm leading-relaxed">{msg.content}</p>
                                         </div>
@@ -213,6 +230,7 @@ export function ChatWindow({ chatId, currentUser, otherUser }: ChatWindowProps) 
                         <div ref={messagesEndRef} />
                     </>
                 )}
+                </div>
             </div>
 
             {/* Input Area */}
