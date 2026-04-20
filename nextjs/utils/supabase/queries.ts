@@ -39,3 +39,41 @@ export const getUserDetails = cache(async (supabase: SupabaseClient) => {
     .single();
   return userDetails;
 });
+
+export const getDashboardStats = cache(async (supabase: SupabaseClient) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const [
+    { count: pendingCount },
+    { count: rejectedCount },
+    { count: completedCount },
+    { count: archivedCount }
+  ] = await Promise.all([
+    supabase.from('documents').select('*', { count: 'exact', head: true }).eq('status', 'pending').eq('creator_id', user.id),
+    supabase.from('documents').select('*', { count: 'exact', head: true }).eq('status', 'paused').eq('creator_id', user.id),
+    supabase.from('documents').select('*', { count: 'exact', head: true }).eq('status', 'completed').eq('creator_id', user.id),
+    supabase.from('documents').select('*', { count: 'exact', head: true }).eq('is_archived', true).eq('creator_id', user.id)
+  ]);
+
+  return {
+    pending: pendingCount || 0,
+    rejected: rejectedCount || 0,
+    completed: completedCount || 0,
+    archived: archivedCount || 0
+  };
+});
+
+export const getRecentDocuments = cache(async (supabase: SupabaseClient) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: documents } = await supabase
+    .from('documents')
+    .select('*, profiles:creator_id(full_name)')
+    .eq('creator_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  return documents || [];
+});
