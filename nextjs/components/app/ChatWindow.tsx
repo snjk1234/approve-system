@@ -43,7 +43,7 @@ export function ChatWindow({ chatId, currentUser, otherUser }: ChatWindowProps) 
 
             if (data) {
                 setMessages(data);
-                
+
                 // Mark messages as read
                 const unreadMessages = data.filter(m => !m.is_read && m.sender_id !== currentUser.id);
                 if (unreadMessages.length > 0) {
@@ -73,7 +73,7 @@ export function ChatWindow({ chatId, currentUser, otherUser }: ChatWindowProps) 
                             if (prev.find(m => m.id === newMsg.id)) return prev;
                             return [...prev, newMsg];
                         });
-                        
+
                         // Mark as read if it's from the other person
                         if (newMsg.sender_id !== currentUser.id) {
                             supabase.from('messages').update({ is_read: true }).eq('id', newMsg.id).then();
@@ -131,7 +131,7 @@ export function ChatWindow({ chatId, currentUser, otherUser }: ChatWindowProps) 
             // Replace temp message with actual
             setMessages(prev => prev.map(m => m.id === tempId ? data : m));
         }
-        
+
         setSending(false);
     };
 
@@ -182,18 +182,17 @@ export function ChatWindow({ chatId, currentUser, otherUser }: ChatWindowProps) 
                         <div className="text-center my-6">
                             <span className="bg-muted px-3 py-1 rounded-full text-xs text-muted-foreground">بداية المحادثة</span>
                         </div>
-                        
+
                         {messages.map((msg) => {
                             const isMe = msg.sender_id === currentUser.id;
                             return (
                                 <div key={msg.id} className={`flex ${isMe ? 'justify-start' : 'justify-end'} w-full`}>
                                     <div className={`max-w-[70%] sm:max-w-[60%] flex flex-col ${isMe ? 'items-start' : 'items-end'}`}>
-                                        <div 
-                                            className={`px-4 py-2.5 rounded-2xl shadow-sm ${
-                                                isMe 
-                                                    ? 'bg-primary text-primary-foreground rounded-tr-none' 
-                                                    : 'bg-card border border-border/50 text-foreground rounded-tl-none'
-                                            }`}
+                                        <div
+                                            className={`px-4 py-2.5 rounded-2xl shadow-sm ${isMe
+                                                ? 'bg-primary text-primary-foreground rounded-tr-none'
+                                                : 'bg-card border border-border/50 text-foreground rounded-tl-none'
+                                                }`}
                                         >
                                             <p className="text-sm leading-relaxed">{msg.content}</p>
                                         </div>
@@ -235,8 +234,8 @@ export function ChatWindow({ chatId, currentUser, otherUser }: ChatWindowProps) 
                             }
                         }}
                     />
-                    <button 
-                        type="submit" 
+                    <button
+                        type="submit"
                         disabled={!newMessage.trim() || sending}
                         className="p-3 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0 shadow-md shadow-primary/20"
                     >
