@@ -10,4 +10,4 @@ FOR SELECT USING (
         WHERE chat_participants.chat_id = chats.id
         AND chat_participants.user_id = auth.uid()
     )
-);
+); 
