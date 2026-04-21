@@ -1,5 +1,5 @@
 import { PropsWithChildren } from 'react';
-import { Sidebar } from '@/components/app/Sidebar';
+import { AppSidebarLayout } from '@/components/app/AppSidebarLayout';
 import { Topbar } from '@/components/app/Topbar';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/utils/supabase/server';
@@ -14,16 +14,9 @@ export default async function AppLayout({ children }: PropsWithChildren) {
 
     return (
         <div className="min-h-screen bg-background">
-            {/* Sidebar */}
-            <Sidebar />
-
-            {/* Main content area - offset for sidebar */}
-            <div className="mr-[260px]">
-                <Topbar />
-                <div className="p-6">
-                    {children}
-                </div>
-            </div>
+            <AppSidebarLayout topbar={<Topbar />}>
+                {children}
+            </AppSidebarLayout>
         </div>
     );
 }

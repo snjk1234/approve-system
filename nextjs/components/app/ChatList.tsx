@@ -18,9 +18,17 @@ export function ChatList({ onSelectChat, selectedChatId }: ChatListProps) {
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [activeFolder, setActiveFolder] = useState<'all' | 'unread' | 'personal' | 'work'>('all');
 
-    const fetchChats = async () => {
-        setLoading(true);
+    const FOLDERS = [
+        { key: 'all', label: 'الكل' },
+        { key: 'unread', label: 'غير مقروء' },
+        { key: 'personal', label: 'شخصي' },
+        { key: 'work', label: 'عمل' },
+    ] as const;
+
+    const fetchChats = async (isBackground = false) => {
+        if (!isBackground) setLoading(true);
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
@@ -84,20 +92,40 @@ export function ChatList({ onSelectChat, selectedChatId }: ChatListProps) {
             }
         } catch (error) {
             console.error('Error fetching chats:', error);
-            setChats([]);
+            if (!isBackground) setChats([]);
         } finally {
-            setLoading(false);
+            if (!isBackground) setLoading(false);
         }
     };
 
-    const filteredChats = chats.filter(chat => 
-        chat.otherUser?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        chat.lastMessage?.content?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredChats = chats.filter(chat => {
+        const matchesSearch = chat.otherUser?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            chat.lastMessage?.content?.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesFolder = activeFolder === 'all'
+            ? true
+            : activeFolder === 'unread'
+                ? chat.unreadCount > 0
+                : true; // personal/work folders require DB folder field (future)
+        return matchesSearch && matchesFolder;
+    });
 
     useEffect(() => {
         fetchChats();
-        // Optional: Subscribe to new messages to update the list unread count
+        
+        // Subscribe to new messages to update the list unread count and latest message
+        const channel = supabase.channel('chat_list_updates')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'messages' },
+                () => {
+                    fetchChats(true);
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
 
@@ -119,7 +147,25 @@ export function ChatList({ onSelectChat, selectedChatId }: ChatListProps) {
                 </button>
             </div>
 
-            {/* Search */}
+            {/* Folder Tabs */}
+            <div className="flex gap-1 px-3 pb-2 border-b border-border/50 overflow-x-auto scrollbar-none">
+                {FOLDERS.map(f => (
+                    <button
+                        key={f.key}
+                        onClick={() => setActiveFolder(f.key)}
+                        className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                            activeFolder === f.key
+                                ? 'bg-primary text-primary-foreground'
+                                : 'text-muted-foreground hover:bg-muted'
+                        }`}
+                    >
+                        {f.label}
+                        {f.key === 'unread' && chats.some(c => c.unreadCount > 0) && (
+                            <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
+                        )}
+                    </button>
+                ))}
+            </div>
             <div className="p-4 border-b border-border/50">
                 <div className="relative">
                     <Input
