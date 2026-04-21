@@ -61,7 +61,7 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
         isMarkingRef.current = true;
         setUnread([]);
         setMessages(prev => prev.map(m => ids.includes(m.id) ? { ...m, is_read: true } : m));
-        await supabase.from('messages').update({ is_read: true }).in('id', ids);
+        await supabase.from('messages' as any).update({ is_read: true }).in('id', ids);
         onUnreadCleared?.();
         isMarkingRef.current = false;
     }, [supabase, setUnread, onUnreadCleared]);
@@ -87,7 +87,7 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
 
             // fetch messages (reply_to is optional - works even without migration 015)
             const { data, error: msgError } = await supabase
-                .from('messages')
+                .from('messages' as any)
                 .select('*')
                 .eq('chat_id', chatId)
                 .order('created_at', { ascending: true });
@@ -114,7 +114,7 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
             } else {
                 // If data is null due to query error, try simpler query
                 const { data: fallback } = await supabase
-                    .from('messages')
+                    .from('messages' as any)
                     .select('*')
                     .eq('chat_id', chatId)
                     .order('created_at', { ascending: true });
@@ -137,11 +137,11 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
             // fetch pinned message (optional - requires migration 015)
             try {
                 const { data: chatData } = await supabase
-                    .from('chats').select('pinned_message_id')
+                    .from('chats' as any).select('pinned_message_id')
                     .eq('id', chatId).single();
                 if (chatData?.pinned_message_id) {
                     const { data: pinMsg } = await supabase
-                        .from('messages').select('id,content,sender_id')
+                        .from('messages' as any).select('id,content,sender_id')
                         .eq('id', chatData.pinned_message_id).single();
                     if (pinMsg) setPinnedMessage(pinMsg);
                 }
@@ -151,7 +151,7 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
             if (otherUser?.id) {
                 try {
                     const { data: profile } = await supabase
-                        .from('profiles').select('full_name,avatar_url,is_online,last_seen')
+                        .from('profiles' as any).select('full_name,avatar_url,is_online,last_seen')
                         .eq('id', otherUser.id).single();
                     if (profile) setOtherUserProfile({ ...otherUser, ...profile });
                 } catch {
@@ -239,13 +239,13 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
         const insertPayload: any = { chat_id: chatId, sender_id: currentUser.id, content };
         if (currentReplyTo?.id) insertPayload.reply_to_id = currentReplyTo.id;
 
-        const result = await supabase.from('messages').insert(insertPayload).select('*').single();
+        const result = await supabase.from('messages' as any).insert(insertPayload).select('*').single();
         data = result.data;
         error = result.error;
 
         if (error) {
             // If error due to unknown column, try without reply_to_id
-            const fallback = await supabase.from('messages')
+            const fallback = await supabase.from('messages' as any)
                 .insert({ chat_id: chatId, sender_id: currentUser.id, content })
                 .select('*').single();
             data = fallback.data;
@@ -274,21 +274,21 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
         // remove empty
         Object.keys(updated).forEach(k => { if ((updated[k] as string[]).length === 0) delete updated[k]; });
         setMessages(prev => prev.map(m => m.id === msgId ? { ...m, reactions: updated } : m));
-        await supabase.from('messages').update({ reactions: updated }).eq('id', msgId);
+        await supabase.from('messages' as any).update({ reactions: updated }).eq('id', msgId);
     };
 
     // ── delete for all ────────────────────────────────────────────────────────
 
     const handleDeleteForAll = async (msgId: string) => {
         setMessages(prev => prev.filter(m => m.id !== msgId));
-        await supabase.from('messages').update({ deleted_for_all: true }).eq('id', msgId);
+        await supabase.from('messages' as any).update({ deleted_for_all: true }).eq('id', msgId);
     };
 
     // ── pin message ───────────────────────────────────────────────────────────
 
     const handlePin = async (msg: any) => {
         setPinnedMessage(msg);
-        await supabase.from('chats').update({ pinned_message_id: msg.id }).eq('id', chatId);
+        await supabase.from('chats' as any).update({ pinned_message_id: msg.id }).eq('id', chatId);
     };
 
     // ── voice recording ───────────────────────────────────────────────────────
@@ -305,7 +305,7 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
                 const { error } = await supabase.storage.from('chat_attachments').upload(path, blob);
                 if (!error) {
                     const { data: url } = supabase.storage.from('chat_attachments').getPublicUrl(path);
-                    await supabase.from('messages').insert({ chat_id: chatId, sender_id: currentUser.id, content: '🎙️ رسالة صوتية', voice_url: url.publicUrl, message_type: 'voice' });
+                    await supabase.from('messages' as any).insert({ chat_id: chatId, sender_id: currentUser.id, content: '🎙️ رسالة صوتية', voice_url: url.publicUrl, message_type: 'voice' });
                 }
             };
             mr.start();
@@ -415,7 +415,7 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
                 <div className="px-4 py-2 border-b border-border/50 bg-amber-500/5 flex items-center gap-2 text-xs text-amber-600">
                     <Pin size={13} className="shrink-0" />
                     <span className="truncate flex-1">{pinnedMessage.content}</span>
-                    <button onClick={() => { setPinnedMessage(null); supabase.from('chats').update({ pinned_message_id: null }).eq('id', chatId).then(); }}>
+                    <button onClick={() => { setPinnedMessage(null); supabase.from('chats' as any).update({ pinned_message_id: null }).eq('id', chatId).then(); }}>
                         <X size={13} />
                     </button>
                 </div>

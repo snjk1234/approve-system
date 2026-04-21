@@ -39,7 +39,7 @@ export function ChatList({ onSelectChat, selectedChatId }: ChatListProps) {
 
             // Fetch chat participants for the current user
             const { data: participations } = await supabase
-                .from('chat_participants')
+                .from('chat_participants' as any)
                 .select('chat_id')
                 .eq('user_id', user.id);
 
@@ -48,7 +48,7 @@ export function ChatList({ onSelectChat, selectedChatId }: ChatListProps) {
                 
                 // Fetch chats with their other participants and last message
                 const { data: chatsData } = await supabase
-                    .from('chats')
+                    .from('chats' as any)
                     .select(`
                         id,
                         created_at,
