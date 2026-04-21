@@ -27,43 +27,60 @@ export function ChatList({ onSelectChat, selectedChatId }: ChatListProps) {
         { key: 'work', label: 'عمل' },
     ] as const;
 
+    useEffect(() => {
+        fetchChats();
+    }, []);
+
     const fetchChats = async (isBackground = false) => {
+        console.log("fetchChats FUNCTION STARTED");
         if (!isBackground) setLoading(true);
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
+                console.log("No user found in ChatList");
                 setLoading(false);
                 return;
             }
             setCurrentUser(user);
 
-            // Fetch chat participants for the current user
-            const { data: participations } = await supabase
+            // 1. Fetch participants to get chat IDs
+            console.log("Fetching participations for user:", user.id);
+            const { data: participations, error: partError } = await supabase
                 .from('chat_participants' as any)
                 .select('chat_id')
                 .eq('user_id', user.id);
 
+            if (partError) {
+                console.error("Participations Error:", partError);
+                throw partError;
+            }
+            console.log("Participations found:", participations?.length);
+
             if (participations && participations.length > 0) {
                 const chatIds = participations.map(p => p.chat_id);
                 
-                // Fetch chats with their other participants and last message
-                const { data: chatsData } = await supabase
+                // 2. Fetch chats
+                console.log("Fetching chats for IDs:", chatIds);
+                const { data: chatsData, error: chatsError } = await supabase
                     .from('chats' as any)
                     .select(`
                         id,
                         created_at,
-                        chat_participants!inner(user_id, profiles!inner(full_name, avatar_url)),
-                        messages(content, created_at, is_read, sender_id)
+                        chat_participants(user_id, profiles(full_name, avatar_url)),
+                        messages!chat_id(content, created_at, is_read, sender_id)
                     `)
-                    .in('id', chatIds)
-                    .order('created_at', { foreignTable: 'messages', ascending: false });
+                    .in('id', chatIds);
+
+                if (chatsError) {
+                    console.error("Chats Fetch Error:", chatsError);
+                    throw chatsError;
+                }
+                console.log("Chats data received:", chatsData?.length);
 
                 if (chatsData) {
                     const formattedChats = chatsData.map((chat: any) => {
-                        // Find the other participant
-                        const otherParticipant = chat.chat_participants.find((p: any) => p.user_id !== user.id);
+                        const otherParticipant = chat.chat_participants?.find((p: any) => p.user_id !== user.id);
                         
-                        // Sort messages to get the latest one safely
                         const sortedMessages = chat.messages ? [...chat.messages].sort((a: any, b: any) => 
                             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                         ) : [];
@@ -75,7 +92,7 @@ export function ChatList({ onSelectChat, selectedChatId }: ChatListProps) {
                             id: chat.id,
                             otherUser: otherParticipant ? {
                                 id: otherParticipant.user_id,
-                                ...otherParticipant.profiles
+                                ...(otherParticipant.profiles || {})
                             } : { full_name: 'مستخدم غير معروف' },
                             lastMessage,
                             unreadCount,
@@ -83,16 +100,15 @@ export function ChatList({ onSelectChat, selectedChatId }: ChatListProps) {
                         };
                     }).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
+                    console.log("Final formatted chats:", formattedChats.length);
                     setChats(formattedChats);
-                } else {
-                    setChats([]);
                 }
             } else {
+                console.log("User has no participations");
                 setChats([]);
             }
         } catch (error) {
-            console.error('Error fetching chats:', error);
-            if (!isBackground) setChats([]);
+            console.error('Detailed error in fetchChats:', error);
         } finally {
             if (!isBackground) setLoading(false);
         }

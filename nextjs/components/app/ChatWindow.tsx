@@ -80,10 +80,12 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
         let channel: any;
 
         async function init() {
+            if (!chatId) return;
             setLoading(true);
             setFirstUnreadId(null);
             setUnread([]);
             isMarkingRef.current = false;
+            console.log("Initializing ChatWindow for:", chatId);
 
             // fetch messages (reply_to is optional - works even without migration 015)
             const { data, error: msgError } = await supabase
@@ -93,45 +95,39 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
                 .order('created_at', { ascending: true });
 
             if (msgError) {
-                console.error('Messages fetch error:', msgError);
+                console.error('Messages fetch error in ChatWindow:', msgError);
             }
 
             if (data) {
+                console.log("Messages received:", data.length);
                 // Filter out deleted messages if column exists
                 const visible = data.filter(m => !m.deleted_for_all);
                 setMessages(visible);
+                
                 const unread = visible.filter((m: any) => !m.is_read && m.sender_id !== currentUser.id);
+                console.log("Unread messages found:", unread.length);
+
                 if (unread.length > 0) {
                     setUnread(unread.map((m: any) => m.id));
                     setFirstUnreadId(unread[0].id);
+                    
+                    // Increase delay to ensure rendering is complete
                     setTimeout(() => {
-                        document.getElementById(`msg-${unread[0].id}`)
-                            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }, 150);
+                        const el = document.getElementById(`msg-${unread[0].id}`);
+                        if (el) {
+                            console.log("Scrolling to unread message:", unread[0].id);
+                            el.scrollIntoView({ behavior: 'auto', block: 'center' });
+                        } else {
+                            console.log("Unread element not found, scrolling to bottom");
+                            scrollToBottom('auto');
+                        }
+                    }, 300);
                 } else {
-                    setTimeout(() => scrollToBottom('auto'), 150);
+                    console.log("No unread messages, scrolling to bottom");
+                    setTimeout(() => scrollToBottom('auto'), 300);
                 }
             } else {
-                // If data is null due to query error, try simpler query
-                const { data: fallback } = await supabase
-                    .from('messages' as any)
-                    .select('*')
-                    .eq('chat_id', chatId)
-                    .order('created_at', { ascending: true });
-                if (fallback) {
-                    setMessages(fallback);
-                    const unread = fallback.filter((m: any) => !m.is_read && m.sender_id !== currentUser.id);
-                    if (unread.length > 0) {
-                        setUnread(unread.map((m: any) => m.id));
-                        setFirstUnreadId(unread[0].id);
-                        setTimeout(() => {
-                            document.getElementById(`msg-${unread[0].id}`)
-                                ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }, 150);
-                    } else {
-                        setTimeout(() => scrollToBottom('auto'), 150);
-                    }
-                }
+                console.log("No messages data found");
             }
 
             // fetch pinned message (optional - requires migration 015)
