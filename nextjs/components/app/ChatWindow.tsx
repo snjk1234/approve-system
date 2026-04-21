@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Send, Paperclip, MoreVertical, User, Mic, MicOff, Search, X, Pin, Reply, Trash2, SmilePlus } from 'lucide-react';
+import { Send, Paperclip, MoreVertical, User, Users, Mic, MicOff, Search, X, Pin, Reply, Trash2, SmilePlus, Clock } from 'lucide-react';
 
 interface ChatWindowProps {
     chatId: string;
@@ -40,9 +40,12 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
     const [showEmojiFor, setShowEmojiFor] = useState<string | null>(null);
     const [otherUserProfile, setOtherUserProfile] = useState<any>(otherUser);
     const [isRecording, setIsRecording] = useState(false);
+    const [chatMetadata, setChatMetadata] = useState<any>(null);
+    const [ephemeralTime, setEphemeralTime] = useState<number | null>(null); // null = disabled, seconds otherwise
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const initialScrollPerformedRef = useRef<string | null>(null);
 
     // ── helpers ──────────────────────────────────────────────────────────────
 
@@ -82,6 +85,7 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
         async function init() {
             if (!chatId) return;
             setLoading(true);
+            setMessages([]); // Clear old messages immediately
             setFirstUnreadId(null);
             setUnread([]);
             isMarkingRef.current = false;
@@ -110,36 +114,25 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
                 if (unread.length > 0) {
                     setUnread(unread.map((m: any) => m.id));
                     setFirstUnreadId(unread[0].id);
-                    
-                    // Increase delay to ensure rendering is complete
-                    setTimeout(() => {
-                        const el = document.getElementById(`msg-${unread[0].id}`);
-                        if (el) {
-                            console.log("Scrolling to unread message:", unread[0].id);
-                            el.scrollIntoView({ behavior: 'auto', block: 'center' });
-                        } else {
-                            console.log("Unread element not found, scrolling to bottom");
-                            scrollToBottom('auto');
-                        }
-                    }, 300);
-                } else {
-                    console.log("No unread messages, scrolling to bottom");
-                    setTimeout(() => scrollToBottom('auto'), 300);
                 }
             } else {
                 console.log("No messages data found");
             }
 
-            // fetch pinned message (optional - requires migration 015)
+            // fetch pinned message and chat metadata (optional - requires migration 015+)
             try {
-                const { data: chatData } = await supabase
-                    .from('chats' as any).select('pinned_message_id')
+                const { data: chatData, error: chatErr } = await supabase
+                    .from('chats' as any).select('type, name, avatar_url, pinned_message_id')
                     .eq('id', chatId).single();
-                if (chatData?.pinned_message_id) {
-                    const { data: pinMsg } = await supabase
-                        .from('messages' as any).select('id,content,sender_id')
-                        .eq('id', chatData.pinned_message_id).single();
-                    if (pinMsg) setPinnedMessage(pinMsg);
+                
+                if (chatData) {
+                    setChatMetadata(chatData); // I need to add this state
+                    if (chatData.pinned_message_id) {
+                        const { data: pinMsg } = await supabase
+                            .from('messages' as any).select('id,content,sender_id')
+                            .eq('id', chatData.pinned_message_id).single();
+                        if (pinMsg) setPinnedMessage(pinMsg);
+                    }
                 }
             } catch {}
 
@@ -202,6 +195,38 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
         };
     }, [chatId, currentUser.id]);
 
+    // Dedicated effect for initial scrolling
+    useLayoutEffect(() => {
+        if (!chatId || loading || messages.length === 0) return;
+        if (initialScrollPerformedRef.current === chatId) return;
+
+        const performScroll = () => {
+            if (firstUnreadId) {
+                const el = document.getElementById(`msg-${firstUnreadId}`);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'auto', block: 'center' });
+                } else {
+                    scrollToBottom('auto');
+                }
+            } else {
+                scrollToBottom('auto');
+            }
+            initialScrollPerformedRef.current = chatId;
+        };
+
+        // Run immediately after layout paint
+        performScroll();
+        
+        // Also a small timeout for components with dynamic height (images/voice)
+        const t1 = setTimeout(performScroll, 100);
+        const t2 = setTimeout(performScroll, 300);
+        
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+        };
+    }, [chatId, loading, messages, firstUnreadId]);
+
     // ── typing broadcast ───────────────────────────────────────────────────────
 
     const handleTyping = (val: string) => {
@@ -234,6 +259,11 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
 
         const insertPayload: any = { chat_id: chatId, sender_id: currentUser.id, content };
         if (currentReplyTo?.id) insertPayload.reply_to_id = currentReplyTo.id;
+        
+        if (ephemeralTime) {
+            const expiresAt = new Date(Date.now() + ephemeralTime * 1000).toISOString();
+            insertPayload.expires_at = expiresAt;
+        }
 
         const result = await supabase.from('messages' as any).insert(insertPayload).select('*').single();
         data = result.data;
@@ -241,8 +271,12 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
 
         if (error) {
             // If error due to unknown column, try without reply_to_id
+            const fallbackPayload: any = { chat_id: chatId, sender_id: currentUser.id, content };
+            if (ephemeralTime) {
+                fallbackPayload.expires_at = new Date(Date.now() + ephemeralTime * 1000).toISOString();
+            }
             const fallback = await supabase.from('messages' as any)
-                .insert({ chat_id: chatId, sender_id: currentUser.id, content })
+                .insert(fallbackPayload)
                 .select('*').single();
             data = fallback.data;
             error = fallback.error;
@@ -360,19 +394,27 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
                 <div className="flex items-center gap-3">
                     <div className="relative">
                         <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary overflow-hidden">
-                            {otherUserProfile?.avatar_url
-                                ? <img src={otherUserProfile.avatar_url} alt="" className="h-full w-full object-cover" />
-                                : <User size={20} />}
+                            {chatMetadata?.type === 'group' ? (
+                                chatMetadata.avatar_url ? <img src={chatMetadata.avatar_url} alt="" className="h-full w-full object-cover" /> : <Users size={20} />
+                            ) : (
+                                otherUserProfile?.avatar_url
+                                    ? <img src={otherUserProfile.avatar_url} alt="" className="h-full w-full object-cover" />
+                                    : <User size={20} />
+                            )}
                         </div>
-                        {otherUserProfile?.is_online && (
+                        {chatMetadata?.type !== 'group' && otherUserProfile?.is_online && (
                             <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background" />
                         )}
                     </div>
                     <div>
-                        <h3 className="font-bold text-sm">{otherUserProfile?.full_name || 'مستخدم غير معروف'}</h3>
+                        <h3 className="font-bold text-sm">
+                            {chatMetadata?.type === 'group' ? chatMetadata.name : (otherUserProfile?.full_name || 'مستخدم غير معروف')}
+                        </h3>
                         <p className="text-[11px] text-muted-foreground">
                             {isTyping ? (
                                 <span className="text-emerald-500 animate-pulse">يكتب الآن...</span>
+                            ) : chatMetadata?.type === 'group' ? (
+                                <span>مجموعة</span>
                             ) : otherUserProfile?.is_online ? (
                                 <span className="text-emerald-500">متصل</span>
                             ) : otherUserProfile?.last_seen ? (
@@ -526,6 +568,9 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
 
                                                 {/* Time + read receipt */}
                                                 <div className="flex items-center gap-1 mt-0.5 px-1">
+                                                    {msg.expires_at && (
+                                                        <Clock size={10} className="text-amber-500 animate-pulse mr-1" />
+                                                    )}
                                                     <span className="text-[10px] text-muted-foreground">
                                                         {new Date(msg.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
@@ -569,6 +614,28 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
                     >
                         {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
                     </button>
+
+                    {/* Ephemeral Toggle */}
+                    <div className="relative">
+                        <button 
+                            type="button"
+                            onClick={() => {
+                                if (!ephemeralTime) setEphemeralTime(60);
+                                else if (ephemeralTime === 60) setEphemeralTime(3600);
+                                else if (ephemeralTime === 3600) setEphemeralTime(86400);
+                                else setEphemeralTime(null);
+                            }}
+                            className={`p-2 transition-all rounded-xl shrink-0 ${ephemeralTime ? 'bg-amber-500 text-white shadow-md' : 'text-muted-foreground hover:bg-muted hover:text-primary'}`}
+                            title="الرسائل المؤقتة"
+                        >
+                            <Clock size={20} />
+                            {ephemeralTime && (
+                                <span className="absolute -top-1 -right-1 bg-white text-amber-500 text-[8px] font-bold px-1 rounded-full border border-amber-500">
+                                    {ephemeralTime === 60 ? '1m' : ephemeralTime === 3600 ? '1h' : '1d'}
+                                </span>
+                            )}
+                        </button>
+                    </div>
 
                     <button type="button" className="p-2 text-muted-foreground hover:text-primary transition-colors rounded-xl hover:bg-primary/10 shrink-0">
                         <Paperclip size={20} />

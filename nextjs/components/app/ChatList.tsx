@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Search, User, Plus, MessageSquare } from 'lucide-react';
+import { Search, User, Users, Plus, MessageSquare } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { NewChatModal } from '@/components/app/NewChatModal';
 
@@ -66,7 +66,10 @@ export function ChatList({ onSelectChat, selectedChatId }: ChatListProps) {
                     .select(`
                         id,
                         created_at,
-                        chat_participants(user_id, profiles(full_name, avatar_url)),
+                        type,
+                        name,
+                        avatar_url,
+                        chat_participants(user_id, role, profiles(full_name, avatar_url)),
                         messages!chat_id(content, created_at, is_read, sender_id)
                     `)
                     .in('id', chatIds);
@@ -88,8 +91,16 @@ export function ChatList({ onSelectChat, selectedChatId }: ChatListProps) {
                         const lastMessage = sortedMessages[0];
                         const unreadCount = sortedMessages.filter((m: any) => !m.is_read && m.sender_id !== user.id).length;
 
+                        // If it's a group, use group metadata
+                        const isGroup = chat.type === 'group';
+                        const displayName = isGroup ? (chat.name || 'مجموعة بدون اسم') : (otherParticipant?.profiles?.full_name || 'مستخدم غير معروف');
+                        const displayAvatar = isGroup ? chat.avatar_url : (otherParticipant?.profiles?.avatar_url);
+
                         return {
                             id: chat.id,
+                            type: chat.type,
+                            displayName,
+                            displayAvatar,
                             otherUser: otherParticipant ? {
                                 id: otherParticipant.user_id,
                                 ...(otherParticipant.profiles || {})
@@ -214,8 +225,12 @@ export function ChatList({ onSelectChat, selectedChatId }: ChatListProps) {
                             >
                                 <div className="relative">
                                     <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0 overflow-hidden">
-                                        {chat.otherUser?.avatar_url ? (
-                                            <img src={chat.otherUser.avatar_url} alt={chat.otherUser.full_name} className="h-full w-full object-cover" />
+                                        {chat.displayAvatar ? (
+                                            <img src={chat.displayAvatar} alt={chat.displayName} className="h-full w-full object-cover" />
+                                        ) : chat.type === 'group' ? (
+                                            <div className="bg-primary/10 w-full h-full flex items-center justify-center">
+                                                <Users size={20} />
+                                            </div>
                                         ) : (
                                             <User size={20} />
                                         )}
@@ -229,7 +244,12 @@ export function ChatList({ onSelectChat, selectedChatId }: ChatListProps) {
                                 
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between mb-1">
-                                        <h3 className="font-bold text-sm truncate">{chat.otherUser?.full_name}</h3>
+                                        <div className="flex items-center gap-1.5 truncate">
+                                            <h3 className="font-bold text-sm truncate">{chat.displayName}</h3>
+                                            {chat.type === 'group' && (
+                                                <span className="px-1.5 py-0.5 rounded bg-muted text-[9px] text-muted-foreground font-medium uppercase tracking-wider">مجموعة</span>
+                                            )}
+                                        </div>
                                         <span className="text-[10px] text-muted-foreground whitespace-nowrap mr-2">
                                             {chat.lastMessage ? new Date(chat.lastMessage.created_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : ''}
                                         </span>
