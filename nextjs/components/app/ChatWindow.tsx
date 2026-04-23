@@ -187,11 +187,17 @@ export function ChatWindow({ chatId, currentUser, otherUser, onUnreadCleared }: 
         init();
 
         // mark user online (optional - requires migration 015)
-        try { supabase.rpc('update_user_presence', { user_id: currentUser.id, online: true }).then(); } catch {}
+        try { 
+            // @ts-ignore
+            supabase.rpc('update_user_presence', { user_id: currentUser.id, online: true }).then(); 
+        } catch {}
 
         return () => {
             if (channel) supabase.removeChannel(channel);
-            try { supabase.rpc('update_user_presence', { user_id: currentUser.id, online: false }).then(); } catch {}
+            try { 
+                // @ts-ignore
+                supabase.rpc('update_user_presence', { user_id: currentUser.id, online: false }).then(); 
+            } catch {}
         };
     }, [chatId, currentUser.id]);
 
