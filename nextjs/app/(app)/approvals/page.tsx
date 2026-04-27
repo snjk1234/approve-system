@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { createClient } from '@/utils/supabase/client';
 import {
     ClipboardCheck,
     Plus,
@@ -196,7 +197,7 @@ function EmptyState({ message }: { message: string }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ApprovalsPage() {
-    const [activeTab, setActiveTab] = useState<'pending' | 'sent'>('pending');
+    const [activeTab, setActiveTab] = useState<'pending' | 'sent' | 'approved'>('pending');
     const [data, setData] = useState<{
         sent: Document[];
         pending: Document[];
@@ -225,9 +226,31 @@ export default function ApprovalsPage() {
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
+    // Real-time subscription
+    useEffect(() => {
+        const supabase = createClient();
+        const channel = supabase.channel('approvals_changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'documents' }, () => {
+                fetchData();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'approval_steps' }, () => {
+                fetchData();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [fetchData]);
+
     // Pending: docs where the user has a pending step
     const pendingDocs = data?.pending.filter(doc =>
         data.mySteps.some(s => s.document_id === doc.id && s.status === 'pending')
+    ) ?? [];
+    
+    // Approved: docs where the user has already approved
+    const approvedDocs = data?.pending.filter(doc =>
+        data.mySteps.some(s => s.document_id === doc.id && s.status === 'approved')
     ) ?? [];
     const myStepMap = Object.fromEntries(
         (data?.mySteps ?? []).map(s => [s.document_id, s.status])
@@ -237,6 +260,7 @@ export default function ApprovalsPage() {
     const sentTotal = data?.sent.length ?? 0;
     const sentCompleted = data?.sent.filter(d => d.status === 'completed').length ?? 0;
     const pendingTotal = pendingDocs.length;
+    const approvedTotal = approvedDocs.length;
 
     return (
         <div className="space-y-6">
@@ -291,6 +315,7 @@ export default function ApprovalsPage() {
             <div className="flex gap-1 rounded-xl border border-border bg-card p-1 w-fit">
                 {[
                     { key: 'pending', label: 'تنتظر موافقتي', icon: Inbox, count: pendingTotal },
+                    { key: 'approved', label: 'اعتمدتها', icon: ClipboardCheck, count: approvedTotal },
                     { key: 'sent', label: 'طلباتي', icon: Send, count: sentTotal },
                 ].map((tab) => {
                     const Icon = tab.icon;
@@ -346,6 +371,18 @@ export default function ApprovalsPage() {
                         pendingDocs.length === 0
                             ? <EmptyState message="لا توجد طلبات تنتظر موافقتك حالياً" />
                             : pendingDocs.map(doc => (
+                                <DocumentCard
+                                    key={doc.id}
+                                    doc={doc}
+                                    profiles={data?.profiles ?? {}}
+                                    myStepStatus={myStepMap[doc.id]}
+                                />
+                            ))
+                    )}
+                    {activeTab === 'approved' && (
+                        approvedDocs.length === 0
+                            ? <EmptyState message="لا توجد أوراق قمت باعتمادها مسبقاً" />
+                            : approvedDocs.map(doc => (
                                 <DocumentCard
                                     key={doc.id}
                                     doc={doc}

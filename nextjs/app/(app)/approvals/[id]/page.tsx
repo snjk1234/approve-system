@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { createClient } from '@/utils/supabase/client';
 import {
     ArrowRight,
     CheckCircle2,
@@ -295,6 +296,23 @@ export default function ApprovalDetailPage() {
     }, [id]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
+
+    // Real-time subscription
+    useEffect(() => {
+        const supabase = createClient();
+        const channel = supabase.channel(`approval_detail_${id}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'documents', filter: `id=eq.${id}` }, () => {
+                fetchData();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'approval_steps', filter: `document_id=eq.${id}` }, () => {
+                fetchData();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [fetchData, id]);
 
     if (loading) {
         return (
