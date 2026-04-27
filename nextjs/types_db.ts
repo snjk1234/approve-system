@@ -220,6 +220,13 @@ export type Database = {
           full_name: string | null
           id: string
           payment_method: Json | null
+          email: string | null
+          phone: string | null
+          department_id: string | null
+          role: string | null
+          is_active: boolean | null
+          created_at: string
+          updated_at: string
         }
         Insert: {
           avatar_url?: string | null
@@ -227,6 +234,13 @@ export type Database = {
           full_name?: string | null
           id: string
           payment_method?: Json | null
+          email?: string | null
+          phone?: string | null
+          department_id?: string | null
+          role?: string | null
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
         }
         Update: {
           avatar_url?: string | null
@@ -234,6 +248,142 @@ export type Database = {
           full_name?: string | null
           id?: string
           payment_method?: Json | null
+          email?: string | null
+          phone?: string | null
+          department_id?: string | null
+          role?: string | null
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      departments: {
+        Row: {
+          id: string
+          name: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      documents: {
+        Row: {
+          id: string
+          request_number: number
+          title: string
+          description: string | null
+          creator_id: string
+          file_url: string | null
+          file_name: string | null
+          status: 'pending' | 'in_progress' | 'paused' | 'completed' | 'cancelled'
+          is_archived: boolean
+          archived_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          request_number?: number
+          title: string
+          description?: string | null
+          creator_id: string
+          file_url?: string | null
+          file_name?: string | null
+          status?: 'pending' | 'in_progress' | 'paused' | 'completed' | 'cancelled'
+          is_archived?: boolean
+          archived_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          request_number?: number
+          title?: string
+          description?: string | null
+          creator_id?: string
+          file_url?: string | null
+          file_name?: string | null
+          status?: 'pending' | 'in_progress' | 'paused' | 'completed' | 'cancelled'
+          is_archived?: boolean
+          archived_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      approval_steps: {
+        Row: {
+          id: string
+          document_id: string
+          approver_id: string
+          sequence: number
+          status: 'waiting' | 'pending' | 'approved' | 'rejected'
+          comment: string | null
+          acted_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          document_id: string
+          approver_id: string
+          sequence: number
+          status?: 'waiting' | 'pending' | 'approved' | 'rejected'
+          comment?: string | null
+          acted_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          document_id?: string
+          approver_id?: string
+          sequence?: number
+          status?: 'waiting' | 'pending' | 'approved' | 'rejected'
+          comment?: string | null
+          acted_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          type: 'approval_request' | 'approved' | 'rejected' | 'memo' | 'completed' | 'message'
+          title: string
+          body: string | null
+          link: string | null
+          is_read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: 'approval_request' | 'approved' | 'rejected' | 'memo' | 'completed' | 'message'
+          title: string
+          body?: string | null
+          link?: string | null
+          is_read?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: 'approval_request' | 'approved' | 'rejected' | 'memo' | 'completed' | 'message'
+          title?: string
+          body?: string | null
+          link?: string | null
+          is_read?: boolean
+          created_at?: string
         }
         Relationships: []
       }
