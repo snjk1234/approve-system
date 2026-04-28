@@ -12,9 +12,15 @@ export default async function AppLayout({ children }: PropsWithChildren) {
         redirect('/login');
     }
 
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+
     return (
         <div className="min-h-screen bg-background">
-            <AppSidebarLayout topbar={<Topbar />}>
+            <AppSidebarLayout topbar={<Topbar />} isAdmin={profile?.is_admin || false}>
                 {children}
             </AppSidebarLayout>
         </div>
