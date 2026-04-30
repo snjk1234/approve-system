@@ -43,6 +43,19 @@ export async function GET() {
             `)
             .order('created_at', { ascending: false });
 
+        // Fetch Documents
+        const { data: documentsList } = await db
+            .from('documents')
+            .select(`
+                id,
+                request_number,
+                title,
+                status,
+                created_at,
+                profiles:creator_id ( full_name )
+            `)
+            .order('created_at', { ascending: false });
+
         return NextResponse.json({
             stats: {
                 totalUsers: usersCount || 0,
@@ -50,7 +63,8 @@ export async function GET() {
                 pendingDocs: pendingDocsCount || 0,
                 completedDocs: completedDocsCount || 0,
             },
-            users: usersList || []
+            users: usersList || [],
+            documents: documentsList || []
         });
 
     } catch (error: any) {

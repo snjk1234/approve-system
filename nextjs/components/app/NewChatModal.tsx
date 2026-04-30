@@ -82,14 +82,14 @@ export function NewChatModal({ isOpen, onClose, onChatCreated, currentUser }: Ne
                 const selectedUser = selectedUsers[0];
                 // Check if private chat already exists
                 const { data: participations } = await supabase
-                    .from('chat_participants' as any)
+                    .from('chat_participants')
                     .select('chat_id')
                     .eq('user_id', currentUser.id);
                 
                 if (participations && participations.length > 0) {
                     const myChatIds = participations.map(c => c.chat_id);
                     const { data: common } = await supabase
-                        .from('chat_participants' as any)
+                        .from('chat_participants')
                         .select('chat_id')
                         .eq('user_id', selectedUser.id)
                         .in('chat_id', myChatIds);
@@ -97,7 +97,7 @@ export function NewChatModal({ isOpen, onClose, onChatCreated, currentUser }: Ne
                     if (common && common.length > 0) {
                         // Check if that common chat is private
                         const { data: chatData } = await supabase
-                            .from('chats' as any)
+                            .from('chats')
                             .select('type')
                             .eq('id', common[0].chat_id)
                             .single();
@@ -121,7 +121,7 @@ export function NewChatModal({ isOpen, onClose, onChatCreated, currentUser }: Ne
             }
 
             const { data: newChat, error: chatError } = await supabase
-                .from('chats' as any)
+                .from('chats')
                 .insert(chatPayload)
                 .select()
                 .single();
@@ -138,7 +138,7 @@ export function NewChatModal({ isOpen, onClose, onChatCreated, currentUser }: Ne
             });
 
             const { error: partError } = await supabase
-                .from('chat_participants' as any)
+                .from('chat_participants')
                 .insert(participantEntries);
 
             if (partError) throw partError;

@@ -213,7 +213,7 @@ export type Database = {
           },
         ]
       }
-      users: {
+      profiles: {
         Row: {
           avatar_url: string | null
           billing_address: Json | null
@@ -385,7 +385,240 @@ export type Database = {
           is_read?: boolean
           created_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      chats: {
+        Row: {
+          id: string
+          created_by: string
+          created_at: string
+          type: "private" | "group" | null
+          name: string | null
+          avatar_url: string | null
+          pinned_message_id: string | null
+        }
+        Insert: {
+          id?: string
+          created_by: string
+          created_at?: string
+          type?: "private" | "group" | null
+          name?: string | null
+          avatar_url?: string | null
+          pinned_message_id?: string | null
+        }
+        Update: {
+          id?: string
+          created_by?: string
+          created_at?: string
+          type?: "private" | "group" | null
+          name?: string | null
+          avatar_url?: string | null
+          pinned_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chats_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      chat_participants: {
+        Row: {
+          id: string
+          chat_id: string
+          user_id: string
+          joined_at: string
+          role: "admin" | "member" | null
+          folder: "all" | "personal" | "work" | "unread" | "archived" | null
+        }
+        Insert: {
+          id?: string
+          chat_id: string
+          user_id: string
+          joined_at?: string
+          role?: "admin" | "member" | null
+          folder?: "all" | "personal" | "work" | "unread" | "archived" | null
+        }
+        Update: {
+          id?: string
+          chat_id?: string
+          user_id?: string
+          joined_at?: string
+          role?: "admin" | "member" | null
+          folder?: "all" | "personal" | "work" | "unread" | "archived" | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_participants_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      messages: {
+        Row: {
+          id: string
+          chat_id: string
+          sender_id: string
+          content: string | null
+          file_url: string | null
+          file_name: string | null
+          is_read: boolean
+          created_at: string
+          reply_to_id: string | null
+          reactions: Json | null
+          deleted_for_all: boolean
+          voice_url: string | null
+          message_type: "text" | "voice" | "image" | "file" | "link" | null
+          link_preview: Json | null
+          expires_at: string | null
+        }
+        Insert: {
+          id?: string
+          chat_id: string
+          sender_id: string
+          content?: string | null
+          file_url?: string | null
+          file_name?: string | null
+          is_read?: boolean
+          created_at?: string
+          reply_to_id?: string | null
+          reactions?: Json | null
+          deleted_for_all?: boolean
+          voice_url?: string | null
+          message_type?: "text" | "voice" | "image" | "file" | "link" | null
+          link_preview?: Json | null
+          expires_at?: string | null
+        }
+        Update: {
+          id?: string
+          chat_id?: string
+          sender_id?: string
+          content?: string | null
+          file_url?: string | null
+          file_name?: string | null
+          is_read?: boolean
+          created_at?: string
+          reply_to_id?: string | null
+          reactions?: Json | null
+          deleted_for_all?: boolean
+          voice_url?: string | null
+          message_type?: "text" | "voice" | "image" | "file" | "link" | null
+          link_preview?: Json | null
+          expires_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      discussion_memos: {
+        Row: {
+          id: string
+          document_id: string
+          objector_id: string
+          creator_id: string
+          status: 'open' | 'resolved' | 'cancelled'
+          created_at: string
+          resolved_at: string | null
+        }
+        Insert: {
+          id?: string
+          document_id: string
+          objector_id: string
+          creator_id: string
+          status?: 'open' | 'resolved' | 'cancelled'
+          created_at?: string
+          resolved_at?: string | null
+        }
+        Update: {
+          id?: string
+          document_id?: string
+          objector_id?: string
+          creator_id?: string
+          status?: 'open' | 'resolved' | 'cancelled'
+          created_at?: string
+          resolved_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discussion_memos_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      memo_messages: {
+        Row: {
+          id: string
+          memo_id: string
+          sender_id: string
+          content: string | null
+          file_url: string | null
+          file_name: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          memo_id: string
+          sender_id: string
+          content?: string | null
+          file_url?: string | null
+          file_name?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          memo_id?: string
+          sender_id?: string
+          content?: string | null
+          file_url?: string | null
+          file_name?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memo_messages_memo_id_fkey"
+            columns: ["memo_id"]
+            isOneToOne: false
+            referencedRelation: "discussion_memos"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {

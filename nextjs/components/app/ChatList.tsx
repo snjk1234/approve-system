@@ -46,7 +46,7 @@ export function ChatList({ onSelectChat, selectedChatId }: ChatListProps) {
             // 1. Fetch participants to get chat IDs
             console.log("Fetching participations for user:", user.id);
             const { data: participations, error: partError } = await supabase
-                .from('chat_participants' as any)
+                .from('chat_participants')
                 .select('chat_id')
                 .eq('user_id', user.id);
 
@@ -62,7 +62,7 @@ export function ChatList({ onSelectChat, selectedChatId }: ChatListProps) {
                 // 2. Fetch chats
                 console.log("Fetching chats for IDs:", chatIds);
                 const { data: chatsData, error: chatsError } = await supabase
-                    .from('chats' as any)
+                    .from('chats')
                     .select(`
                         id,
                         created_at,

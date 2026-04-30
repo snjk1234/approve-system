@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import {
     ClipboardCheck,
     XCircle,
@@ -21,28 +22,32 @@ export default async function DashboardPage() {
             value: statsData?.pending || 0,
             icon: ClipboardCheck,
             color: 'text-amber-500',
-            bgColor: 'bg-amber-500/10'
+            bgColor: 'bg-amber-500/10',
+            href: '/approvals'
         },
         {
             label: 'مرفوضة / تحت النقاش',
             value: statsData?.rejected || 0,
             icon: XCircle,
             color: 'text-red-500',
-            bgColor: 'bg-red-500/10'
+            bgColor: 'bg-red-500/10',
+            href: '/approvals'
         },
         {
             label: 'مكتملة',
             value: statsData?.completed || 0,
             icon: CheckCircle2,
             color: 'text-emerald-500',
-            bgColor: 'bg-emerald-500/10'
+            bgColor: 'bg-emerald-500/10',
+            href: '/approvals'
         },
         {
             label: 'الأرشيف',
             value: statsData?.archived || 0,
             icon: Archive,
             color: 'text-blue-500',
-            bgColor: 'bg-blue-500/10'
+            bgColor: 'bg-blue-500/10',
+            href: '/archive'
         }
     ];
 
@@ -61,14 +66,15 @@ export default async function DashboardPage() {
                 {stats.map((stat) => {
                     const Icon = stat.icon;
                     return (
-                        <div
+                        <Link
                             key={stat.label}
-                            className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
+                            href={stat.href}
+                            className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 cursor-pointer block"
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                             <div className="relative flex items-start justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-muted-foreground">
+                                    <p className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                                         {stat.label}
                                     </p>
                                     <p className="mt-2 text-3xl font-bold text-foreground">
@@ -81,7 +87,7 @@ export default async function DashboardPage() {
                                     <Icon size={22} />
                                 </div>
                             </div>
-                        </div>
+                        </Link>
                     );
                 })}
             </div>

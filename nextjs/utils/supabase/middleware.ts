@@ -73,8 +73,11 @@ export const updateSession = async (request: NextRequest) => {
                        request.nextUrl.pathname.startsWith('/register') ||
                        request.nextUrl.pathname.startsWith('/auth');
 
+    const isAdminPage = request.nextUrl.pathname.startsWith('/admin');
+    const isApiRoute = request.nextUrl.pathname.startsWith('/api');
+
     // If user is not logged in and trying to access a protected route
-    if (!user && !isAuthPage && request.nextUrl.pathname !== '/') {
+    if (!user && !isAuthPage && !isAdminPage && !isApiRoute && request.nextUrl.pathname !== '/') {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       return NextResponse.redirect(url);

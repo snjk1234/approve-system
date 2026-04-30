@@ -60,10 +60,6 @@ export function Sidebar({ isPinned, setIsPinned, isAdmin }: { isPinned?: boolean
     const pathname = usePathname();
     const [isHovered, setIsHovered] = useState(false);
 
-    const bottomItemsWithAdmin = isAdmin 
-        ? [{ href: '/admin', label: 'لوحة الإدارة', icon: ShieldAlert }, ...bottomItems]
-        : bottomItems;
-
     // If no props are passed (e.g. usage outside layout wrapper), assume it's always pinned
     const _isPinned = isPinned ?? true;
     const expanded = _isPinned || isHovered;
@@ -148,7 +144,7 @@ export function Sidebar({ isPinned, setIsPinned, isAdmin }: { isPinned?: boolean
 
             {/* Bottom nav */}
             <div className="px-3 pb-4 space-y-1 border-t border-white/10 pt-3 overflow-hidden">
-                {bottomItemsWithAdmin.map((item) => {
+                {bottomItems.map((item) => {
                     const isActive = pathname === item.href;
                     const Icon = item.icon;
                     return (

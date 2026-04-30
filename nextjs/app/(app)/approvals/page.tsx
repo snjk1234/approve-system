@@ -292,13 +292,17 @@ export default function ApprovalsPage() {
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4">
                 {[
-                    { label: 'إجمالي الطلبات', value: sentTotal, icon: Send, color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20' },
-                    { label: 'مكتملة', value: sentCompleted, icon: CheckCircle2, color: 'text-green-500 bg-green-50 dark:bg-green-900/20' },
-                    { label: 'تنتظر موافقتك', value: pendingTotal, icon: ClipboardCheck, color: pendingTotal > 0 ? 'text-primary bg-primary/10' : 'text-muted-foreground bg-muted' },
+                    { label: 'إجمالي الطلبات', value: sentTotal, icon: Send, color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20', targetTab: 'sent' as const },
+                    { label: 'مكتملة', value: sentCompleted, icon: CheckCircle2, color: 'text-green-500 bg-green-50 dark:bg-green-900/20', targetTab: 'sent' as const },
+                    { label: 'تنتظر موافقتك', value: pendingTotal, icon: ClipboardCheck, color: pendingTotal > 0 ? 'text-primary bg-primary/10' : 'text-muted-foreground bg-muted', targetTab: 'pending' as const },
                 ].map((stat) => {
                     const Icon = stat.icon;
                     return (
-                        <div key={stat.label} className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
+                        <div 
+                            key={stat.label} 
+                            onClick={() => setActiveTab(stat.targetTab)}
+                            className="rounded-xl border border-border bg-card p-4 flex items-center gap-3 cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
+                        >
                             <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${stat.color}`}>
                                 <Icon size={20} />
                             </div>
