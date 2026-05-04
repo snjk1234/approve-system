@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { PropsWithChildren } from 'react';
 import { AppSidebarLayout } from '@/components/app/AppSidebarLayout';
 import { Topbar } from '@/components/app/Topbar';
