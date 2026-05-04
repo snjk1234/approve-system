@@ -225,6 +225,7 @@ export type Database = {
           department_id: string | null
           role: string | null
           is_active: boolean | null
+          is_admin: boolean | null
           created_at: string
           updated_at: string
         }
@@ -239,6 +240,7 @@ export type Database = {
           department_id?: string | null
           role?: string | null
           is_active?: boolean | null
+          is_admin?: boolean | null
           created_at?: string
           updated_at?: string
         }
@@ -253,6 +255,7 @@ export type Database = {
           department_id?: string | null
           role?: string | null
           is_active?: boolean | null
+          is_admin?: boolean | null
           created_at?: string
           updated_at?: string
         }

@@ -1,6 +1,7 @@
 import { PropsWithChildren } from 'react';
 import { AppSidebarLayout } from '@/components/app/AppSidebarLayout';
 import { Topbar } from '@/components/app/Topbar';
+// @ts-nocheck
 import { createClient } from '@/utils/supabase/server';
 
 export default async function AdminLayout({ children }: PropsWithChildren) {

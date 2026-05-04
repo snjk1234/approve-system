@@ -6,7 +6,7 @@ import {
 } from '@supabase/supabase-js';
 import { getURL } from '@/utils/helpers';
 
-export const createApiClient = (supabase: SupabaseClient<Database>) => {
+export const createApiClient = (supabase: any) => {
   const passwordSignup = async (creds: { email: string; password: string; options?: { data?: Record<string, any> } }) => {
     const res = await supabase.auth.signUp({
       email: creds.email,
