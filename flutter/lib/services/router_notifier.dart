@@ -7,6 +7,9 @@ import 'package:devtodollars/components/reset_password_dialog.dart';
 import 'package:devtodollars/screens/auth_screen.dart';
 import 'package:devtodollars/screens/home_screen.dart';
 import 'package:devtodollars/screens/payments_screen.dart';
+import 'package:devtodollars/screens/approvals_screen.dart';
+import 'package:devtodollars/screens/approval_details_screen.dart';
+import 'package:devtodollars/screens/new_approval_screen.dart';
 import 'package:devtodollars/services/auth_notifier.dart';
 
 part 'router_notifier.g.dart';
@@ -68,7 +71,7 @@ GoRouter router(RouterRef ref) {
         name: 'home',
         path: '/',
         builder: (context, state) {
-          return const HomeScreen(title: "DevToDollars");
+          return const HomeScreen(title: "نظام الاعتمادات");
         },
         routes: [
           GoRoute(
@@ -77,7 +80,27 @@ GoRouter router(RouterRef ref) {
             pageBuilder: (_, __) {
               return const DialogPage(child: ResetPasswordDialog());
             },
-          )
+          ),
+          GoRoute(
+            name: 'approvals',
+            path: 'approvals',
+            builder: (context, state) => const ApprovalsScreen(),
+            routes: [
+              GoRoute(
+                name: 'new-approval',
+                path: 'new',
+                builder: (context, state) => const NewApprovalScreen(),
+              ),
+              GoRoute(
+                name: 'approval-details',
+                path: ':id',
+                builder: (context, state) {
+                  final id = state.pathParameters['id']!;
+                  return ApprovalDetailsScreen(documentId: id);
+                },
+              ),
+            ],
+          ),
         ],
       ),
       GoRoute(
