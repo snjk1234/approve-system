@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import {
     ClipboardCheck,
@@ -57,7 +58,7 @@ interface Profile {
 const STATUS_CONFIG: Record<DocStatus, { label: string; icon: typeof Clock; className: string }> = {
     pending: { label: 'معلق', icon: Clock, className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' },
     in_progress: { label: 'قيد المراجعة', icon: AlertCircle, className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-    paused: { label: 'موقوف', icon: AlertCircle, className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' },
+    paused: { label: 'تحتاج تعديل', icon: AlertCircle, className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
     completed: { label: 'مكتمل', icon: CheckCircle2, className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
     cancelled: { label: 'مرفوض', icon: XCircle, className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
 };
@@ -197,7 +198,14 @@ function EmptyState({ message }: { message: string }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ApprovalsPage() {
-    const [activeTab, setActiveTab] = useState<'pending' | 'sent' | 'approved'>('pending');
+    const searchParams = useSearchParams();
+    const tabParam = searchParams.get('tab');
+    const getInitialTab = (): 'pending' | 'sent' | 'approved' => {
+        if (tabParam === 'sent') return 'sent';
+        if (tabParam === 'approved') return 'approved';
+        return 'pending';
+    };
+    const [activeTab, setActiveTab] = useState<'pending' | 'sent' | 'approved'>(getInitialTab);
     const [data, setData] = useState<{
         sent: Document[];
         pending: Document[];
@@ -267,8 +275,8 @@ export default function ApprovalsPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground">الاعتمادات</h1>
-                    <p className="text-sm text-muted-foreground mt-1">إدارة طلبات الاعتماد والموافقات</p>
+                    <h1 className="text-2xl font-bold text-foreground">المراسلات</h1>
+                    <p className="text-sm text-muted-foreground mt-1">إدارة طلبات المراسلة والموافقات</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
@@ -385,7 +393,7 @@ export default function ApprovalsPage() {
                     )}
                     {activeTab === 'approved' && (
                         approvedDocs.length === 0
-                            ? <EmptyState message="لا توجد أوراق قمت باعتمادها مسبقاً" />
+                             ? <EmptyState message="لا توجد أوراق قمت بمراسلتها مسبقاً" />
                             : approvedDocs.map(doc => (
                                 <DocumentCard
                                     key={doc.id}
@@ -397,7 +405,7 @@ export default function ApprovalsPage() {
                     )}
                     {activeTab === 'sent' && (
                         (data?.sent.length ?? 0) === 0
-                            ? <EmptyState message="لم تقم بإرسال أي طلبات اعتماد بعد" />
+                             ? <EmptyState message="لم تقم بإرسال أي طلبات مراسلة بعد" />
                             : (data?.sent ?? []).map(doc => (
                                 <DocumentCard
                                     key={doc.id}

@@ -26,7 +26,7 @@ const navItems = [
     },
     {
         href: '/approvals',
-        label: 'الاعتمادات',
+        label: 'المراسلات',
         icon: ClipboardCheck
     },
     {
@@ -54,11 +54,91 @@ const bottomItems = [
     }
 ];
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createClient } from '@/utils/supabase/client';
 
 export function Sidebar({ isPinned, setIsPinned, isAdmin }: { isPinned?: boolean, setIsPinned?: (v: boolean) => void, isAdmin?: boolean }) {
     const pathname = usePathname();
     const [isHovered, setIsHovered] = useState(false);
+    const [unreadChats, setUnreadChats] = useState(0);
+    const [unreadApprovals, setUnreadApprovals] = useState(0);
+    const [archivedCount, setArchivedCount] = useState(0);
+
+    useEffect(() => {
+        const supabase = createClient();
+
+        async function fetchCounts() {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            // Fetch unread messages count
+            const { count: msgCount } = await supabase
+                .from('messages')
+                .select('*', { count: 'exact', head: true })
+                .eq('is_read', false)
+                .neq('sender_id', user.id);
+            setUnreadChats(msgCount || 0);
+
+            // Fetch unread approvals notifications count
+            const { count: notifCount } = await supabase
+                .from('notifications')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .eq('is_read', false)
+                .in('type', ['approval_request', 'approved', 'rejected', 'completed']);
+            setUnreadApprovals(notifCount || 0);
+
+            // Fetch archived/completed documents count
+            const { count: archiveCount } = await supabase
+                .from('documents')
+                .select('*', { count: 'exact', head: true })
+                .eq('creator_id', user.id)
+                .in('status', ['completed', 'cancelled']);
+            setArchivedCount(archiveCount || 0);
+        }
+
+        fetchCounts();
+
+        // Subscribe to real-time changes
+        const messagesChannel = supabase
+            .channel('sidebar-messages-changes')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'messages' },
+                () => {
+                    fetchCounts();
+                }
+            )
+            .subscribe();
+
+        const notifsChannel = supabase
+            .channel('sidebar-notifs-changes')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'notifications' },
+                () => {
+                    fetchCounts();
+                }
+            )
+            .subscribe();
+
+        const docsChannel = supabase
+            .channel('sidebar-docs-changes')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'documents' },
+                () => {
+                    fetchCounts();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(messagesChannel);
+            supabase.removeChannel(notifsChannel);
+            supabase.removeChannel(docsChannel);
+        };
+    }, []);
 
     // If no props are passed (e.g. usage outside layout wrapper), assume it's always pinned
     const _isPinned = isPinned ?? true;
@@ -79,7 +159,7 @@ export function Sidebar({ isPinned, setIsPinned, isAdmin }: { isPinned?: boolean
                     {expanded && (
                         <div className="whitespace-nowrap transition-opacity duration-300">
                             <h1 className="text-base font-bold leading-tight">فلورينا</h1>
-                            <p className="text-[11px] text-sidebar-foreground/60">نظام الاعتمادات</p>
+                            <p className="text-[11px] text-sidebar-foreground/60">نظام المراسلات</p>
                         </div>
                     )}
                 </div>
@@ -106,13 +186,23 @@ export function Sidebar({ isPinned, setIsPinned, isAdmin }: { isPinned?: boolean
                 {navItems.map((item) => {
                     const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
                     const Icon = item.icon;
+
+                    let badgeCount = 0;
+                    if (item.href === '/chat') {
+                        badgeCount = unreadChats;
+                    } else if (item.href === '/approvals') {
+                        badgeCount = unreadApprovals;
+                    } else if (item.href === '/archive') {
+                        badgeCount = archivedCount;
+                    }
+
                     return (
                         <Link
                             key={item.href}
                             href={item.href}
                             className={`
                 flex items-center px-3 py-2.5 rounded-lg text-sm font-medium
-                transition-all duration-200 group
+                transition-all duration-200 group relative
                 ${isActive
                                     ? 'bg-primary text-primary-foreground shadow-md'
                                     : 'text-sidebar-foreground/70 hover:bg-sidebar-hover hover:text-sidebar-foreground'
@@ -122,7 +212,7 @@ export function Sidebar({ isPinned, setIsPinned, isAdmin }: { isPinned?: boolean
                         >
                             <div
                                 className={`
-                  flex h-8 w-8 shrink-0 items-center justify-center rounded-lg
+                  flex h-8 w-8 shrink-0 items-center justify-center rounded-lg relative
                   transition-all duration-200
                   ${isActive
                                         ? 'bg-white/20'
@@ -131,10 +221,18 @@ export function Sidebar({ isPinned, setIsPinned, isAdmin }: { isPinned?: boolean
                 `}
                             >
                                 <Icon size={18} />
+                                {!expanded && badgeCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 h-2.5 w-2.5 rounded-full border-2 border-sidebar animate-pulse" />
+                                )}
                             </div>
                             {expanded && (
-                                <span className="whitespace-nowrap transition-opacity duration-300">
-                                    {item.label}
+                                <span className="flex-1 flex justify-between items-center whitespace-nowrap transition-opacity duration-300">
+                                    <span>{item.label}</span>
+                                    {badgeCount > 0 && (
+                                        <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mr-2">
+                                            {badgeCount}
+                                        </span>
+                                    )}
                                 </span>
                             )}
                         </Link>
