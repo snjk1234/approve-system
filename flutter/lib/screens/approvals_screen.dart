@@ -39,7 +39,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> with SingleTi
         backgroundColor: Colors.grey[50],
         appBar: AppBar(
           title: const Text(
-            'نظام الاعتمادات',
+            'نظام المراسلات',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
           ),
           elevation: 0,
@@ -209,7 +209,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> with SingleTi
                 children: [
                   Icon(Icons.inbox, size: 64, color: Colors.grey),
                   SizedBox(height: 12),
-                  Text('لا توجد طلبات اعتماد حالياً', style: TextStyle(color: Colors.grey)),
+                  Text('لا توجد طلبات مراسلة حالياً', style: TextStyle(color: Colors.grey)),
                 ],
               ),
             )

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { PropsWithChildren } from 'react';
 import { AppSidebarLayout } from '@/components/app/AppSidebarLayout';
 import { Topbar } from '@/components/app/Topbar';
@@ -13,11 +12,12 @@ export default async function AppLayout({ children }: PropsWithChildren) {
         redirect('/login');
     }
 
+    type ProfileRow = { is_admin: boolean | null };
     const { data: profile } = await supabase
         .from('profiles')
         .select('is_admin')
         .eq('id', user.id)
-        .single();
+        .maybeSingle<ProfileRow>();
 
     return (
         <div className="min-h-screen bg-background">

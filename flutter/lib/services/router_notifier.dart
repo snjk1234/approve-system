@@ -71,7 +71,7 @@ GoRouter router(RouterRef ref) {
         name: 'home',
         path: '/',
         builder: (context, state) {
-          return const HomeScreen(title: "نظام الاعتمادات");
+          return const HomeScreen(title: "نظام المراسلات");
         },
         routes: [
           GoRoute(

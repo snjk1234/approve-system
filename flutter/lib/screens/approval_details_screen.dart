@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -36,10 +37,52 @@ class _ApprovalDetailsScreenState extends ConsumerState<ApprovalDetailsScreen> {
           );
       _commentController.clear();
       if (mounted) {
+        String msg = 'تمت العملية بنجاح';
+        if (action == 'approve') {
+          msg = 'تمت الموافقة بنجاح';
+        } else if (action == 'reject') {
+          msg = 'تم الرفض بنجاح';
+        } else if (action == 'request_changes') {
+          msg = 'تم إرسال طلب التعديل بنجاح';
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(action == 'approve' ? 'تمت الموافقة بنجاح' : 'تم الرفض بنجاح'),
-            backgroundColor: action == 'approve' ? Colors.green : Colors.red,
+            content: Text(msg),
+            backgroundColor: action == 'approve' ? Colors.green : action == 'reject' ? Colors.red : Colors.amber[800],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('حدث خطأ: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleResubmit() async {
+    setState(() {
+      _submitting = true;
+    });
+
+    try {
+      await ref.read(approvalsProvider.notifier).resubmitDocument(
+            documentId: widget.documentId,
+            comment: _commentController.text,
+          );
+      _commentController.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم استكمال المراسلة بنجاح'),
+            backgroundColor: Colors.green,
           ),
         );
       }
@@ -67,7 +110,7 @@ class _ApprovalDetailsScreenState extends ConsumerState<ApprovalDetailsScreen> {
       child: Scaffold(
         backgroundColor: Colors.grey[50],
         appBar: AppBar(
-          title: const Text('تفاصيل طلب الاعتماد', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text('تفاصيل طلب المراسلة', style: TextStyle(fontWeight: FontWeight.bold)),
           elevation: 0,
           backgroundColor: Colors.white,
           foregroundColor: Colors.black,
@@ -114,7 +157,9 @@ class _ApprovalDetailsScreenState extends ConsumerState<ApprovalDetailsScreen> {
               ),
             );
 
-            final bool canAct = myStep.id.isNotEmpty && doc.status != 'completed' && doc.status != 'cancelled';
+            final bool canAct = myStep.id.isNotEmpty && doc.status == 'in_progress';
+            final bool isCreator = doc.creatorId == data.userId;
+            final bool canResubmit = isCreator && doc.status == 'paused';
 
             return Column(
               children: [
@@ -130,6 +175,7 @@ class _ApprovalDetailsScreenState extends ConsumerState<ApprovalDetailsScreen> {
 
                         // Steps Timeline Card
                         _buildTimelineCard(doc.approvalSteps, data.profiles),
+                        _buildUnifiedCommentsCard(doc.approvalSteps),
                       ],
                     ),
                   ),
@@ -137,6 +183,8 @@ class _ApprovalDetailsScreenState extends ConsumerState<ApprovalDetailsScreen> {
 
                 // Bottom Action Box (if user is the pending approver)
                 if (canAct) _buildActionPanel(),
+                // Bottom Resubmit Box (if user is the creator and changes are requested)
+                if (canResubmit) _buildResubmitPanel(),
               ],
             );
           },
@@ -228,7 +276,7 @@ class _ApprovalDetailsScreenState extends ConsumerState<ApprovalDetailsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'سلسلة الموافقات والاعتماد',
+            'سلسلة الموافقات والمراسلة',
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
           ),
           const SizedBox(height: 16),
@@ -278,19 +326,7 @@ class _ApprovalDetailsScreenState extends ConsumerState<ApprovalDetailsScreen> {
                             ),
                             if (step.comment != null && step.comment!.isNotEmpty) ...[
                               const SizedBox(height: 6),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[50],
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey[200]!),
-                                ),
-                                child: Text(
-                                  step.comment!,
-                                  style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                                ),
-                              ),
+                              _buildCommentThread(step.comment!),
                             ],
                             if (step.actedAt != null) ...[
                               const SizedBox(height: 4),
@@ -364,7 +400,7 @@ class _ApprovalDetailsScreenState extends ConsumerState<ApprovalDetailsScreen> {
             TextField(
               controller: _commentController,
               decoration: InputDecoration(
-                hintText: 'اكتب تعليقك هنا (اختياري)...',
+                hintText: 'اكتب تعليقك هنا (اختياري، أو إجباري عند طلب التعديل)...',
                 filled: true,
                 fillColor: Colors.grey[50],
                 border: OutlineInputBorder(
@@ -383,30 +419,120 @@ class _ApprovalDetailsScreenState extends ConsumerState<ApprovalDetailsScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: _submitting
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : const Text('موافقة', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text('موافقة', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _submitting ? null : () {
+                      if (_commentController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('يرجى كتابة التعديل المطلوب في التعليق أولاً'), backgroundColor: Colors.amber),
+                        );
+                        return;
+                      }
+                      _handleAction('request_changes');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber[800],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: _submitting
+                        ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text('طلب تعديل', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton(
                     onPressed: _submitting ? null : () => _handleAction('reject'),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Colors.red),
                       foregroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: _submitting
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.red, strokeWidth: 2))
-                        : const Text('رفض الاعتماد', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.red, strokeWidth: 2))
+                        : const Text('رفض', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildResubmitPanel() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -4),
+          )
+        ],
+        border: Border(top: BorderSide(color: Colors.grey[200]!)),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.edit, color: Colors.amber[800]),
+                const SizedBox(width: 8),
+                Text(
+                  'طلب تعديل على المراسلة',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber[800]),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'طلب المعتمد تعديلاً على المراسلة. يرجى تعديل المطلوب في الملفات أو التفاصيل ثم كتابة توضيح والضغط على زر استكمال المراسلة لإعادة الإرسال.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _commentController,
+              decoration: InputDecoration(
+                hintText: 'أضف تعليق استكمال (اختياري)...',
+                filled: true,
+                fillColor: Colors.grey[50],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+              ),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: _submitting ? null : _handleResubmit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber[800],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: _submitting
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('استكمال المراسلة (تم التعديل)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             ),
           ],
         ),
@@ -429,6 +555,11 @@ class _ApprovalDetailsScreenState extends ConsumerState<ApprovalDetailsScreen> {
         color = Colors.orange[700]!;
         bgColor = Colors.orange[50]!;
         label = 'معلق';
+        break;
+      case 'paused':
+        color = Colors.amber[800]!;
+        bgColor = Colors.amber[50]!;
+        label = 'تحتاج تعديل';
         break;
       case 'in_progress':
         color = Colors.blue[700]!;
@@ -498,5 +629,198 @@ class _ApprovalDetailsScreenState extends ConsumerState<ApprovalDetailsScreen> {
     } catch (_) {
       return dateStr;
     }
+  }
+
+  Widget _buildCommentThread(String commentString) {
+    try {
+      final List<dynamic> list = jsonDecode(commentString);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: list.map<Widget>((c) {
+          final String userName = c['user_name'] ?? 'معتمد';
+          final String action = c['action'] ?? 'تعليق';
+          final String text = c['comment'] ?? '';
+          final String? time = c['created_at'];
+
+          return Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(top: 6),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '$userName ($action)',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black85),
+                    ),
+                    if (time != null)
+                      Text(
+                        _formatDateTime(time),
+                        style: TextStyle(fontSize: 9, color: Colors.grey[400]),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  text,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      );
+    } catch (_) {}
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Text(
+        commentString,
+        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+      ),
+    );
+  }
+
+  Widget _buildUnifiedCommentsCard(List<ApprovalStep> steps) {
+    final List<Map<String, dynamic>> allComments = [];
+
+    for (final step in steps) {
+      if (step.comment == null || step.comment!.isEmpty) continue;
+      try {
+        final List<dynamic> parsed = jsonDecode(step.comment!);
+        for (final c in parsed) {
+          allComments.add(Map<String, dynamic>.from(c as Map));
+        }
+      } catch (_) {
+        allComments.add({
+          'user_name': 'معتمد',
+          'action': step.status == 'approved' ? 'موافقة' : step.status == 'rejected' ? 'رفض' : 'تعليق سابق',
+          'comment': step.comment!,
+          'created_at': step.actedAt ?? DateTime.now().toUtc().toIso8601String(),
+        });
+      }
+    }
+
+    allComments.sort((a, b) {
+      final aTime = DateTime.parse(a['created_at'] as String);
+      final bTime = DateTime.parse(b['created_at'] as String);
+      return aTime.compareTo(bTime);
+    });
+
+    if (allComments.isEmpty) return const SizedBox.shrink();
+
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(top: 20),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey[200]!),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.comment, color: Colors.blue),
+                SizedBox(width: 8),
+                Text(
+                  'سلسلة التعليقات والملاحظات',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...allComments.map((c) {
+              final String userName = c['user_name'] ?? 'معتمد';
+              final String action = c['action'] ?? 'تعليق';
+              final String text = c['comment'] ?? '';
+              final String? time = c['created_at'];
+
+              Color labelColor = Colors.grey;
+              Color labelBg = Colors.grey[100]!;
+              if (action == 'موافقة') {
+                labelColor = Colors.green[700]!;
+                labelBg = Colors.green[50]!;
+              } else if (action == 'طلب تعديل') {
+                labelColor = Colors.amber[800]!;
+                labelBg = Colors.amber[50]!;
+              } else if (action == 'استكمال' || action.contains('استكمال')) {
+                labelColor = Colors.blue[700]!;
+                labelBg = Colors.blue[50]!;
+              } else if (action == 'رفض') {
+                labelColor = Colors.red[700]!;
+                labelBg = Colors.red[50]!;
+              }
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[100]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              userName,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: labelBg,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                action,
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: labelColor),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (time != null)
+                          Text(
+                            _formatDateTime(time),
+                            style: TextStyle(fontSize: 10, color: Colors.grey[400]),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      text,
+                      style: TextStyle(fontSize: 13, color: Colors.grey[800]),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -43,7 +43,7 @@ export default function ProfilePage() {
                     .from('profiles' as any)
                     .select('*, departments(name), roles(name)' as any)
                     .eq('id', authUser.id)
-                    .single();
+                    .maybeSingle();
 
                 if (userData) {
                     const u = userData as any;

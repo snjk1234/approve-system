@@ -218,7 +218,7 @@ export default function NewApprovalPage() {
             const json = await res.json();
             if (!res.ok || json.error) throw new Error(json.error || 'فشل إنشاء الطلب');
             setSuccess(true);
-            setTimeout(() => router.push('/approvals'), 1200);
+            setTimeout(() => router.push('/approvals?tab=sent'), 1200);
         } catch (err: any) {
             setSubmitError(err.message);
         } finally {
@@ -235,7 +235,7 @@ export default function NewApprovalPage() {
                     <CheckCircle2 size={32} className="text-green-600" />
                 </div>
                 <h2 className="text-lg font-semibold text-foreground">تم إرسال الطلب بنجاح</h2>
-                <p className="text-sm text-muted-foreground">سيتم توجيهك إلى قائمة الاعتمادات...</p>
+                <p className="text-sm text-muted-foreground">سيتم توجيهك إلى قائمة المراسلات...</p>
             </div>
         );
     }
@@ -251,8 +251,8 @@ export default function NewApprovalPage() {
                     <ArrowRight size={18} />
                 </button>
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground">طلب اعتماد جديد</h1>
-                    <p className="text-sm text-muted-foreground mt-0.5">إنشاء مسار اعتماد تسلسلي</p>
+                    <h1 className="text-2xl font-bold text-foreground">طلب مراسلة جديد</h1>
+                    <p className="text-sm text-muted-foreground mt-0.5">إنشاء مسار مراسلة تسلسلي</p>
                 </div>
             </div>
 
@@ -350,7 +350,7 @@ export default function NewApprovalPage() {
                             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
                                 <User size={15} />
                             </div>
-                            <h2 className="font-semibold text-foreground text-sm">سلسلة الاعتماد</h2>
+                            <h2 className="font-semibold text-foreground text-sm">سلسلة المراسلة</h2>
                         </div>
                         <span className="text-xs text-muted-foreground">
                             {selectedApprovers.length > 0 ? `${selectedApprovers.length} معتمد` : 'لا يوجد'}
@@ -469,7 +469,7 @@ export default function NewApprovalPage() {
                     ) : (
                         <>
                             <CheckCircle2 size={16} />
-                            إرسال طلب الاعتماد
+                            إرسال طلب المراسلة
                         </>
                     )}
                 </button>

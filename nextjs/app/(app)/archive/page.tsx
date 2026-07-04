@@ -92,7 +92,7 @@ export default function ArchivePage() {
                         الأرشيف والبحث الشامل
                     </h1>
                     <p className="text-sm text-muted-foreground mt-1">
-                        ابحث في طلبات الاعتماد، الملفات المرفقة، التعليقات، أو المحادثات
+                        ابحث في طلبات المراسلة، الملفات المرفقة، التعليقات، أو الشات
                     </p>
                 </div>
                 
@@ -148,7 +148,7 @@ export default function ArchivePage() {
                                 }`}
                             >
                                 <FileText size={16} />
-                                الاعتمادات والملفات
+                                المراسلات والملفات
                                 <span className="bg-muted px-2 py-0.5 rounded-full text-xs ml-1">{data.documents.length}</span>
                             </button>
                             <button
@@ -160,7 +160,7 @@ export default function ArchivePage() {
                                 }`}
                             >
                                 <MessageSquare size={16} />
-                                المحادثات
+                                الشات
                                 <span className="bg-muted px-2 py-0.5 rounded-full text-xs ml-1">{data.chats.length}</span>
                             </button>
                         </div>
@@ -176,7 +176,7 @@ export default function ArchivePage() {
                             data.documents.length === 0 ? (
                                 <div className="text-center py-16 bg-card rounded-xl border border-border">
                                     <Archive className="mx-auto h-12 w-12 text-muted-foreground opacity-20 mb-3" />
-                                    <p className="text-muted-foreground">لا توجد طلبات اعتماد مطابقة للبحث</p>
+                                    <p className="text-muted-foreground">لا توجد طلبات مراسلة مطابقة للبحث</p>
                                 </div>
                             ) : (
                                 <div className="grid gap-3">
@@ -195,13 +195,15 @@ export default function ArchivePage() {
                                                 </div>
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
                                                     ${doc.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 
-                                                      doc.status === 'in_progress' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 
+                                                      doc.status === 'in_progress' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' : 
+                                                      doc.status === 'paused' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 
                                                       doc.status === 'cancelled' ? 'bg-red-500/10 text-red-600 border-red-500/20' : 
                                                       'bg-slate-500/10 text-slate-600 border-slate-500/20'}`}>
                                                     {doc.status === 'completed' ? 'مكتمل' : 
-                                                     doc.status === 'in_progress' ? 'قيد المراجعة' : 
+                                                     doc.status === 'in_progress' ? 'جاري' : 
+                                                     doc.status === 'paused' ? 'تحتاج تعديل' : 
                                                      doc.status === 'cancelled' ? 'ملغي' : 
-                                                     doc.status === 'pending' ? 'بانتظار الاعتماد' : doc.status}
+                                                     doc.status === 'pending' ? 'بانتظار المراسلة' : doc.status}
                                                 </span>
                                             </div>
                                             
@@ -227,7 +229,7 @@ export default function ArchivePage() {
                                                 <div className="mt-4 pt-3 border-t border-border/50">
                                                     <p className="text-xs font-bold text-foreground mb-2 flex items-center gap-1.5">
                                                         <CheckCircle2 size={14} className="text-muted-foreground" />
-                                                        سجل الاعتمادات:
+                                                        سجل المراسلات:
                                                     </p>
                                                     <div className="flex flex-col gap-2">
                                                         {doc.steps.filter(s => s.status !== 'waiting').map((step, idx) => (

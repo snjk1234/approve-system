@@ -15,9 +15,9 @@ const tajawal = Tajawal({
 });
 
 const meta = {
-  title: 'فلورينا - نظام المحادثات والاعتمادات',
+  title: 'فلورينا - الشات والمراسلات',
   description:
-    'نظام المحادثات المؤسسية ومسار الاعتماد التسلسلي',
+    'نظام الشات المؤسسي ومسار المراسلة التسلسلي',
   cardImage: getURL('/api/og'),
   robots: 'follow, index',
   favicon: '/favicon.ico',

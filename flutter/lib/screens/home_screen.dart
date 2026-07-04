@@ -1,4 +1,5 @@
 import 'package:devtodollars/services/metadata_notifier.dart';
+import 'package:devtodollars/services/notifications_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,10 +16,135 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  void _showNotificationsSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: Consumer(
+            builder: (context, ref, child) {
+              final notificationsAsync = ref.watch(notificationsProvider);
+              return Container(
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                height: MediaQuery.of(context).size.height * 0.5,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "الإشعارات",
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              NotificationsService.markAllAsRead();
+                            },
+                            child: const Text("تحديد الكل كمقروء"),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(),
+                    Expanded(
+                      child: notificationsAsync.when(
+                        data: (list) {
+                          if (list.isEmpty) {
+                            return const Center(
+                              child: Text("لا توجد إشعارات حالياً"),
+                            );
+                          }
+                          return ListView.builder(
+                            itemCount: list.length,
+                            itemBuilder: (context, index) {
+                              final notif = list[index];
+                              final isRead = notif['is_read'] == true;
+                              IconData icon;
+                              Color iconColor;
+                              switch (notif['type']) {
+                                case 'approval_request':
+                                  icon = Icons.hourglass_empty;
+                                  iconColor = Colors.amber[800]!;
+                                  break;
+                                case 'approved':
+                                case 'completed':
+                                  icon = Icons.check_circle_outline;
+                                  iconColor = Colors.green;
+                                  break;
+                                case 'rejected':
+                                  icon = Icons.error_outline;
+                                  iconColor = Colors.red;
+                                  break;
+                                default:
+                                  icon = Icons.notifications_none;
+                                  iconColor = Colors.grey;
+                              }
+
+                              return ListTile(
+                                leading: Icon(icon, color: iconColor),
+                                title: Text(
+                                  notif['title'] ?? '',
+                                  style: TextStyle(
+                                    fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
+                                  ),
+                                ),
+                                subtitle: notif['body'] != null ? Text(notif['body']) : null,
+                                trailing: !isRead
+                                    ? Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: const BoxDecoration(
+                                          color: Colors.blue,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      )
+                                    : null,
+                                onTap: () {
+                                  NotificationsService.markAsRead(notif['id']);
+                                  Navigator.pop(context);
+
+                                  final link = notif['link'] as String?;
+                                  if (link != null && link.contains('/approvals/')) {
+                                    final id = link.split('/approvals/').last;
+                                    if (id.isNotEmpty) {
+                                      context.go('/approvals/$id');
+                                    }
+                                  }
+                                },
+                              );
+                            },
+                          );
+                        },
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (err, _) => Center(child: Text("خطأ: $err")),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authNotif = ref.watch(authProvider.notifier);
     final metaAsync = ref.watch(metadataProvider);
+    final notificationsAsync = ref.watch(notificationsProvider);
+    final unreadCount = notificationsAsync.maybeWhen(
+      data: (list) => list.where((n) => n['is_read'] == false).length,
+      orElse: () => 0,
+    );
+
     final pricingUrl = Uri.parse(
         "https://github.com/devtodollars/mvp-boilerplate/blob/main/flutter/README.md");
     return Directionality(
@@ -31,6 +157,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           elevation: 0,
           title: Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold)),
           actions: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications),
+                  onPressed: () => _showNotificationsSheet(context, ref),
+                ),
+                if (unreadCount > 0)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '$unreadCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             TextButton(
               onPressed: () => context.replaceNamed("payments"),
               child: const Text("الاشتراكات", style: TextStyle(fontWeight: FontWeight.bold)),
@@ -112,7 +272,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'نظام الاعتمادات',
+                                'نظام المراسلات',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 20,
@@ -121,7 +281,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ),
                               SizedBox(height: 6),
                               Text(
-                                'إدارة طلبات الموافقة والاعتمادات الرسمية وسلسلة الموافقات',
+                                'إدارة طلبات الموافقة والمراسلات الرسمية وسلسلة الموافقات',
                                 style: TextStyle(
                                   color: Colors.white70,
                                   fontSize: 13,

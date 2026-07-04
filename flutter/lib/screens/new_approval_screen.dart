@@ -147,7 +147,7 @@ class _NewApprovalScreenState extends ConsumerState<NewApprovalScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم إنشاء طلب الاعتماد بنجاح'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('تم إنشاء طلب المراسلة بنجاح'), backgroundColor: Colors.green),
         );
         context.go('/approvals');
       }
@@ -173,7 +173,7 @@ class _NewApprovalScreenState extends ConsumerState<NewApprovalScreen> {
       child: Scaffold(
         backgroundColor: Colors.grey[50],
         appBar: AppBar(
-          title: const Text('طلب اعتماد جديد', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text('طلب مراسلة جديد', style: TextStyle(fontWeight: FontWeight.bold)),
           elevation: 0,
           backgroundColor: Colors.white,
           foregroundColor: Colors.black,
@@ -203,8 +203,8 @@ class _NewApprovalScreenState extends ConsumerState<NewApprovalScreen> {
                             TextFormField(
                               controller: _titleController,
                               decoration: InputDecoration(
-                                labelText: 'عنوان طلب الاعتماد *',
-                                hintText: 'مثال: اعتماد فاتورة المشتريات لشهر يونيو',
+                                labelText: 'عنوان طلب المراسلة *',
+                                hintText: 'مثال: مراسلة فاتورة المشتريات لشهر يونيو',
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                               ),
                               validator: (val) {
@@ -320,7 +320,7 @@ class _NewApprovalScreenState extends ConsumerState<NewApprovalScreen> {
                           child: _submitting
                               ? const CircularProgressIndicator(color: Colors.white)
                               : const Text(
-                                  'إرسال طلب الاعتماد',
+                                  'إرسال طلب المراسلة',
                                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                 ),
                         ),

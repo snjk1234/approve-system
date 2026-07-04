@@ -166,7 +166,7 @@ export function ChatList({ onSelectChat, selectedChatId }: ChatListProps) {
         <div className="flex flex-col h-full border-l border-border/50 bg-card/50 relative">
             {/* Header */}
             <div className="p-4 border-b border-border/50 flex items-center justify-between">
-                <h2 className="font-bold text-lg">المحادثات</h2>
+                <h2 className="font-bold text-lg">الشات</h2>
                 <button 
                     onClick={() => setIsModalOpen(true)}
                     className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 transition-colors"
@@ -197,7 +197,7 @@ export function ChatList({ onSelectChat, selectedChatId }: ChatListProps) {
             <div className="p-4 border-b border-border/50">
                 <div className="relative">
                     <Input
-                        placeholder="ابحث في المحادثات..."
+                        placeholder="ابحث في الشات..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="pr-9 h-10 rounded-xl bg-background"

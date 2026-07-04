@@ -21,7 +21,7 @@ const navItems = [
     },
     {
         href: '/chat',
-        label: 'المحادثات',
+        label: 'شات',
         icon: MessageSquare
     },
     {
@@ -62,7 +62,6 @@ export function Sidebar({ isPinned, setIsPinned, isAdmin }: { isPinned?: boolean
     const [isHovered, setIsHovered] = useState(false);
     const [unreadChats, setUnreadChats] = useState(0);
     const [unreadApprovals, setUnreadApprovals] = useState(0);
-    const [archivedCount, setArchivedCount] = useState(0);
 
     useEffect(() => {
         const supabase = createClient();
@@ -79,22 +78,14 @@ export function Sidebar({ isPinned, setIsPinned, isAdmin }: { isPinned?: boolean
                 .neq('sender_id', user.id);
             setUnreadChats(msgCount || 0);
 
-            // Fetch unread approvals notifications count
-            const { count: notifCount } = await supabase
-                .from('notifications')
+            // Count pending approval steps awaiting user action
+            const { count: pendingCount } = await supabase
+                .from('approval_steps')
                 .select('*', { count: 'exact', head: true })
-                .eq('user_id', user.id)
-                .eq('is_read', false)
-                .in('type', ['approval_request', 'approved', 'rejected', 'completed']);
-            setUnreadApprovals(notifCount || 0);
-
-            // Fetch archived/completed documents count
-            const { count: archiveCount } = await supabase
-                .from('documents')
-                .select('*', { count: 'exact', head: true })
-                .eq('creator_id', user.id)
-                .in('status', ['completed', 'cancelled']);
-            setArchivedCount(archiveCount || 0);
+                .eq('approver_id', user.id)
+                .eq('status', 'pending')
+                .is('acted_at', null);
+            setUnreadApprovals(pendingCount || 0);
         }
 
         fetchCounts();
@@ -111,22 +102,11 @@ export function Sidebar({ isPinned, setIsPinned, isAdmin }: { isPinned?: boolean
             )
             .subscribe();
 
-        const notifsChannel = supabase
-            .channel('sidebar-notifs-changes')
+        const stepsChannel = supabase
+            .channel('sidebar-steps-changes')
             .on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'notifications' },
-                () => {
-                    fetchCounts();
-                }
-            )
-            .subscribe();
-
-        const docsChannel = supabase
-            .channel('sidebar-docs-changes')
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'documents' },
+                { event: '*', schema: 'public', table: 'approval_steps' },
                 () => {
                     fetchCounts();
                 }
@@ -135,8 +115,7 @@ export function Sidebar({ isPinned, setIsPinned, isAdmin }: { isPinned?: boolean
 
         return () => {
             supabase.removeChannel(messagesChannel);
-            supabase.removeChannel(notifsChannel);
-            supabase.removeChannel(docsChannel);
+            supabase.removeChannel(stepsChannel);
         };
     }, []);
 
@@ -192,8 +171,6 @@ export function Sidebar({ isPinned, setIsPinned, isAdmin }: { isPinned?: boolean
                         badgeCount = unreadChats;
                     } else if (item.href === '/approvals') {
                         badgeCount = unreadApprovals;
-                    } else if (item.href === '/archive') {
-                        badgeCount = archivedCount;
                     }
 
                     return (

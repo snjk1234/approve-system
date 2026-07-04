@@ -1,6 +1,8 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 export const createClient = (request: NextRequest) => {
   // Create an unmodified response
   let response = NextResponse.next({

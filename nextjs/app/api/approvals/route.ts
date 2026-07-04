@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/utils/supabase/admin';
 
 export async function GET() {
     try {
@@ -82,7 +83,8 @@ export async function GET() {
                     )
                 `)
                 .in('id', docIds)
-                .eq('is_archived', false);
+                .eq('is_archived', false)
+                .neq('status', 'paused');
 
             if (assignedError) {
                 console.error('Error fetching assigned documents:', assignedError);
@@ -187,11 +189,12 @@ export async function POST(request: Request) {
 
         // Notify first approver
         const firstApproverId = approvers[0];
-        await db.from('notifications').insert({
+        const adminDb = createAdminClient();
+        await adminDb.from('notifications').insert({
             user_id: firstApproverId,
             type: 'approval_request',
-            title: 'طلب اعتماد جديد',
-            body: `لديك طلب اعتماد جديد: ${title.trim()}`,
+            title: 'طلب مراسلة جديد',
+            body: `لديك طلب مراسلة جديد: ${title.trim()}`,
             link: `/approvals/${doc.id}`,
         });
 

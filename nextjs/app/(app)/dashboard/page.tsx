@@ -1,4 +1,3 @@
-// @ts-nocheck
 import Link from 'next/link';
 import {
     ClipboardCheck,
@@ -19,20 +18,28 @@ export default async function DashboardPage() {
 
     const stats = [
         {
-            label: 'بانتظار الاعتماد',
+            label: 'جاري الاعتماد',
             value: statsData?.pending || 0,
             icon: ClipboardCheck,
             color: 'text-amber-500',
             bgColor: 'bg-amber-500/10',
-            href: '/approvals'
+            href: '/approvals?status=rejected'
         },
         {
-            label: 'مرفوضة / تحت النقاش',
+            label: 'مرفوضة',
             value: statsData?.rejected || 0,
             icon: XCircle,
             color: 'text-red-500',
             bgColor: 'bg-red-500/10',
-            href: '/approvals'
+            href: '/approvals?status=rejected'
+        },
+        {
+            label: 'تحت المناقشة',
+            value: statsData?.paused || 0,
+            icon: Clock,
+            color: 'text-slate-500',
+            bgColor: 'bg-slate-500/10',
+            href: '/approvals?status=paused'
         },
         {
             label: 'مكتملة',
@@ -40,7 +47,7 @@ export default async function DashboardPage() {
             icon: CheckCircle2,
             color: 'text-emerald-500',
             bgColor: 'bg-emerald-500/10',
-            href: '/approvals'
+            href: '/approvals?tab=sent'
         },
         {
             label: 'الأرشيف',
@@ -58,19 +65,19 @@ export default async function DashboardPage() {
             <div>
                 <h1 className="text-2xl font-bold text-foreground">لوحة التحكم</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                    مرحباً بك في نظام المحادثات والاعتمادات المؤسسية
+                    مرحباً بك في الشات والمراسلات المؤسسية
                 </p>
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 {stats.map((stat) => {
                     const Icon = stat.icon;
                     return (
                         <Link
                             key={stat.label}
                             href={stat.href}
-                            className="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 cursor-pointer block"
+                            className="group relative overflow-hidden rounded-xl border border-border bg-card p-3 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 cursor-pointer block"
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                             <div className="relative flex items-start justify-between">
@@ -100,7 +107,7 @@ export default async function DashboardPage() {
                     className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-md hover:bg-primary/90 transition-all duration-200 hover:shadow-lg"
                 >
                     <ClipboardCheck size={18} />
-                    طلب اعتماد جديد
+                    طلب مراسلة جديد
                 </a>
                 <a
                     href="/chat"
@@ -138,9 +145,11 @@ export default async function DashboardPage() {
                                         <td className="px-5 py-4">
                                             <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium 
                                                 ${doc.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' : 
-                                                  doc.status === 'pending' ? 'bg-amber-500/10 text-amber-500' : 
+                                                  doc.status === 'in_progress' ? 'bg-blue-500/10 text-blue-500' : 
+                                                  doc.status === 'paused' ? 'bg-amber-500/10 text-amber-500' : 
+                                                  doc.status === 'cancelled' ? 'bg-red-500/10 text-red-500' : 
                                                   'bg-slate-500/10 text-slate-500'}`}>
-                                                {doc.status === 'completed' ? 'مكتمل' : doc.status === 'pending' ? 'قيد الانتظار' : doc.status}
+                                                {doc.status === 'completed' ? 'مكتمل' : doc.status === 'in_progress' ? 'جاري' : doc.status === 'paused' ? 'تحتاج تعديل' : doc.status === 'cancelled' ? 'ملغي' : 'قيد الانتظار'}
                                             </span>
                                         </td>
                                         <td className="px-5 py-4 text-muted-foreground">
@@ -155,7 +164,7 @@ export default async function DashboardPage() {
                     <div className="p-12 text-center text-muted-foreground">
                         <FileText size={40} className="mx-auto mb-3 opacity-40" />
                         <p className="text-sm">لا توجد طلبات حالياً</p>
-                        <p className="text-xs mt-1">ابدأ بإنشاء طلب اعتماد جديد من القائمة أعلاه</p>
+                        <p className="text-xs mt-1">ابدأ بإنشاء طلب مراسلة جديد من القائمة أعلاه</p>
                     </div>
                 )}
             </div>

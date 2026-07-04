@@ -232,9 +232,9 @@ export default function AdminDashboardPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {[
                             { label: 'إجمالي المستخدمين', value: data.stats.totalUsers, icon: Users, color: 'text-purple-500 bg-purple-50 dark:bg-purple-900/20 border-purple-100 dark:border-purple-800', tab: 'users' as const },
-                            { label: 'إجمالي الاعتمادات', value: data.stats.totalDocs, icon: FileText, color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800', tab: 'allDocs' as const },
-                            { label: 'اعتمادات نشطة', value: data.stats.pendingDocs, icon: Clock, color: 'text-orange-500 bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-800', tab: 'pendingDocs' as const },
-                            { label: 'اعتمادات مكتملة', value: data.stats.completedDocs, icon: CheckCircle2, color: 'text-green-500 bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-800', tab: 'completedDocs' as const },
+                            { label: 'إجمالي المراسلات', value: data.stats.totalDocs, icon: FileText, color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800', tab: 'allDocs' as const },
+                            { label: 'مراسلات نشطة', value: data.stats.pendingDocs, icon: Clock, color: 'text-orange-500 bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-800', tab: 'pendingDocs' as const },
+                            { label: 'مراسلات مكتملة', value: data.stats.completedDocs, icon: CheckCircle2, color: 'text-green-500 bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-800', tab: 'completedDocs' as const },
                         ].map((stat, i) => (
                             <button 
                                 key={i} 
@@ -258,10 +258,10 @@ export default function AdminDashboardPage() {
                             <div>
                                 <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
                                     {activeTab === 'users' ? <Users size={18} className="text-primary" /> : <FileText size={18} className="text-primary" />}
-                                    {activeTab === 'users' ? 'إدارة المستخدمين' : activeTab === 'allDocs' ? 'جميع الاعتمادات' : activeTab === 'pendingDocs' ? 'الاعتمادات النشطة' : 'الاعتمادات المكتملة'}
+                                    {activeTab === 'users' ? 'إدارة المستخدمين' : activeTab === 'allDocs' ? 'جميع المراسلات' : activeTab === 'pendingDocs' ? 'المراسلات النشطة' : 'المراسلات المكتملة'}
                                 </h2>
                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                    {activeTab === 'users' ? 'قائمة بجميع الموظفين المسجلين في النظام' : 'قائمة بطلبات الاعتماد في النظام لتسهيل المراقبة والمتابعة'}
+                                    {activeTab === 'users' ? 'قائمة بجميع الموظفين المسجلين في النظام' : 'قائمة بطلبات المراسلة في النظام لتسهيل المراقبة والمتابعة'}
                                 </p>
                             </div>
                             <div className="relative w-full sm:w-64">
@@ -334,7 +334,7 @@ export default function AdminDashboardPage() {
                                         filteredDocs.length === 0 ? (
                                             <tr>
                                                 <td colSpan={5} className="px-5 py-8 text-center text-muted-foreground">
-                                                    لا توجد طلبات اعتماد مطابقة
+                                                    لا توجد طلبات مراسلة مطابقة
                                                 </td>
                                             </tr>
                                         ) : (
@@ -350,13 +350,15 @@ export default function AdminDashboardPage() {
                                                     <td className="px-5 py-3">
                                                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium 
                                                             ${doc.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' : 
-                                                              doc.status === 'in_progress' ? 'bg-amber-500/10 text-amber-500' : 
+                                                              doc.status === 'in_progress' ? 'bg-blue-500/10 text-blue-500' : 
+                                                              doc.status === 'paused' ? 'bg-amber-500/10 text-amber-500' : 
                                                               doc.status === 'cancelled' ? 'bg-red-500/10 text-red-500' : 
                                                               'bg-slate-500/10 text-slate-500'}`}>
                                                             {doc.status === 'completed' ? 'مكتمل' : 
-                                                             doc.status === 'in_progress' ? 'قيد المراجعة' : 
+                                                             doc.status === 'in_progress' ? 'جاري' : 
+                                                             doc.status === 'paused' ? 'تحتاج تعديل' : 
                                                              doc.status === 'cancelled' ? 'ملغي' : 
-                                                             doc.status === 'pending' ? 'بانتظار الاعتماد' : doc.status}
+                                                             doc.status === 'pending' ? 'بانتظار المراسلة' : doc.status}
                                                         </span>
                                                     </td>
                                                     <td className="px-5 py-3 text-muted-foreground text-xs">{formatDate(doc.created_at)}</td>
